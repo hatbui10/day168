@@ -681,6 +681,15 @@
                             </select>
                             <span id="segLenInfo" style="font-size:10px;color:#94a3b8">→ đoạn 7 số (2 số đầu nhập + 5 số phía sau)</span>
                         </div>
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:5px">
+                            <label style="font-size:11px;color:#e9d5ff;font-weight:bold">Sắp xếp kết quả:</label>
+                            <select id="segSort" onchange="onSegSortChange()" style="background:#0b1220;color:#4ade80;border:2px solid #16a34a;border-radius:6px;padding:5px 8px;font-weight:bold;font-size:12px;cursor:pointer;font-family:inherit">
+                                <option value="issue" selected>🆔 Kỳ lớn nhất trên cùng</option>
+                                <option value="value">🔢 Số lớn nhất trên cùng</option>
+                                <option value="sum">➕ Tổng lớn nhất trên cùng</option>
+                            </select>
+                            <span id="segSortInfo" style="font-size:10px;color:#94a3b8">Kỳ lớn nhất trên cùng, bé dần xuống dưới (theo ID kỳ xổ)</span>
+                        </div>
                         <div style="font-size:11px;color:#e9d5ff;font-weight:bold;margin-bottom:4px">🔎 Nhập các số đầu:</div>
                         <div id="segInputs" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"></div>
                         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:7px">
@@ -3256,6 +3265,7 @@
                     let dataTableMode = 'latest';      // 'latest' | 'segments'
                     let dataTableSeg = null;           // {d1, d2}
                     let dataTableLastLen = -1;
+                    let segSortMode = 'issue';       // sắp xếp kết quả tra đoạn: 'issue' | 'value' | 'sum'
 
                     // kho đang sắp MỚI -> CŨ → đảo thành CŨ -> MỚI để cắt đoạn 5 số liên tiếp
                     function archiveChrono() {
@@ -3400,6 +3410,75 @@
                         out.reverse();   // đoạn mới nhất lên đầu
                         return out;
                     }
+                    // 🔢 SẮP XẾP KẾT QUẢ TRA ĐOẠN
+                    //  'issue' (MẶC ĐỊNH) : KỲ LỚN NHẤT trên cùng, giảm dần xuống dưới (theo ID kỳ xổ)
+                    //  'value'            : SỐ LỚN NHẤT (ghép 5 số phía sau) trên cùng, số nhỏ nhất dưới
+                    //  'sum'              : TỔNG 5 số phía sau lớn nhất trên cùng
+                    //  Trùng nhau -> xếp tiếp theo ID kỳ xổ (kỳ lớn nhất trước). ID so sánh bằng CHUỖI (ID 17 số vượt JS number)
+                    function segTailDigits(s, n) {
+                        const raw = (s && s.digits != null) ? s.digits : [];
+                        const d = Array.isArray(raw) ? raw : String(raw).split('');
+                        const cut = Math.max(0, Number(n) || 0);
+                        return d.slice(cut).map(x => String(x)).filter(x => /^\d$/.test(x));
+                    }
+                    function segIssueId(s) {
+                        return String((s && s.start && s.start.i) || (s && s.i) || '');
+                    }
+                    function segIssueCmp(a, b) {   // >0 nếu kỳ a MỚI hơn kỳ b
+                        const ia = segIssueId(a), ib = segIssueId(b);
+                        if (ia.length !== ib.length) return ib.length - ia.length;
+                        if (ia === ib) return 0;
+                        return ia > ib ? 1 : -1;
+                    }
+                    function segTailValue(s, n) {
+                        const t = segTailDigits(s, n);
+                        if (!t.length) return -1;
+                        const v = parseInt(t.join(''), 10);
+                        return Number.isFinite(v) ? v : -1;
+                    }
+                    function segTailSum(s, n) {
+                        const t = segTailDigits(s, n);
+                        let sm = 0;
+                        for (const x of t) sm += Number(x);
+                        return t.length ? sm : -1;
+                    }
+                    function sortSegments(segs, n) {
+                        const list = (segs || []).slice();
+                        if (segSortMode !== 'value' && segSortMode !== 'sum') {
+                            // KỲ LỚN NHẤT TRÊN CÙNG, giảm dần xuống dưới
+                            list.sort(function (a, b) { return -segIssueCmp(a, b); });   // âm = lớn trước
+                            return list;
+                        }
+                        list.sort(function (a, b) {
+                            if (segSortMode === 'sum') {
+                                const ds = segTailSum(b, n) - segTailSum(a, n);
+                                if (ds) return ds;
+                                const dv = segTailValue(b, n) - segTailValue(a, n);
+                                if (dv) return dv;
+                            } else {
+                                const dv = segTailValue(b, n) - segTailValue(a, n);   // số lớn nhất trên cùng
+                                if (dv) return dv;
+                            }
+                            return -segIssueCmp(a, b);   // trùng số -> kỳ lớn nhất trước
+                        });
+                        return list;
+                    }
+                    function onSegSortChange() {
+                        const el = document.getElementById('segSort');
+                        segSortMode = (el && el.value) ? el.value : 'value';
+                        try { localStorage.setItem('vn168_segSort', segSortMode); } catch (e) {}
+                        updateSegSortInfo();
+                        try { renderDataTable(dataTableMode); } catch (e) {}
+                    }
+                    function updateSegSortInfo() {
+                        const info = document.getElementById('segSortInfo');
+                        if (!info) return;
+                        info.textContent = segSortMode === 'sum'
+                            ? 'Tổng 5 số phía sau lớn nhất trên cùng · trùng thì xếp theo ID kỳ xổ'
+                            : (segSortMode === 'value'
+                                ? 'Số lớn nhất trên cùng, số nhỏ nhất dưới · trùng số thì xếp theo ID kỳ xổ'
+                                : 'Kỳ lớn nhất trên cùng, bé dần xuống dưới (theo ID kỳ xổ)');
+                    }
                     // copy các số vừa nhập xuống 4 ô bên dưới (tối đa 4 số, lấy 4 số cuối)
                     function renderSegMirror(vals) {
                         const box = document.getElementById('segMirror');
@@ -3520,7 +3599,7 @@
                             const n = prefix.length;
                             const total = n + SEG_TAIL;
                             const key = prefix.join('');
-                            const segs = (dataTableFbSegs || findSegments(prefix));
+                            const segs = sortSegments(dataTableFbSegs || findSegments(prefix), n);
                             // thống kê 5 số phía sau phần nhập
                             const stat = [];
                             for (let t = 0; t < SEG_TAIL; t++) stat.push({});
@@ -3547,6 +3626,7 @@
                                 html += '<div class="ch-empty">Không có đoạn nào — thử dãy số khác hoặc bấm "⬇️ Tải 100 trang".</div>';
                             } else {
                                 html += '<div class="dt-sum">Có <b>' + segs.length + '</b> đoạn bắt đầu bằng <b>' + key + '</b>'
+                                    + ' · <b>' + (segSortMode === 'sum' ? 'tổng lớn nhất trên cùng' : (segSortMode === 'value' ? 'số lớn nhất trên cùng' : 'kỳ lớn nhất trên cùng')) + '</b>'
                                     + ' · số thứ ' + (n + 1) + ' hay ra: <b class="dt-rest">' + (topOf(stat[0]).join(', ') || '-') + '</b>'
                                     + statLine + '</div>';
                                 const LIMIT = 500;
@@ -3561,7 +3641,7 @@
                                         + '<span class="dt-t">' + s.end.i + ' · ' + (s.end.t ? fmtTime(s.end.t) : '') + '</span></div>';
                                 }
                                 if (segs.length > LIMIT) {
-                                    html += '<div class="ch-empty">… chỉ hiện ' + LIMIT + ' đoạn mới nhất / ' + segs.length + ' đoạn.</div>';
+                                    html += '<div class="ch-empty">… chỉ hiện ' + LIMIT + ' đoạn đầu theo thứ tự sắp xếp / ' + segs.length + ' đoạn.</div>';
                                 }
                             }
                             body.innerHTML = html;
@@ -3699,7 +3779,8 @@
                         let text = '';
                         const stamp = new Date().toLocaleString('vi-VN');
                         if (dataTableMode === 'segments' && dataTableSeg) {
-                            const segs = dataTableFbSegs || findSegments(dataTableSeg.prefix);
+                            const segs = sortSegments(dataTableFbSegs || findSegments(dataTableSeg.prefix),
+                                dataTableSeg.len || (dataTableSeg.prefix || []).length);
                             if (!segs.length) { text = 'KHONG CO DOAN NAO BAT DAU BANG ' + dataTableSeg.prefix.join('') + ' | ' + stamp; }
                             else text = 'DOAN ' + segs[0].digits.length + ' SO BAT DAU BANG ' + dataTableSeg.prefix.join('')
                                 + ' | ' + segs.length + ' doan | ' + stamp + '\n'
@@ -6620,6 +6701,15 @@
                     try { renderMatchBoxes(); } catch(e){}
                     try { updateLastResolveLine(); } catch(e){}
                     try { renderSegInputs(false); } catch(e){}
+                    // khôi phục cách sắp xếp đã lưu (mặc định: số lớn nhất trên cùng)
+                    try {
+                        let sv = localStorage.getItem('vn168_segSort');
+                        if (sv === 'newest') sv = 'issue';          // tên cũ -> tên mới
+                        if (sv === 'issue' || sv === 'value' || sv === 'sum') segSortMode = sv;
+                        const ss = document.getElementById('segSort');
+                        if (ss) ss.value = segSortMode;
+                        updateSegSortInfo();
+                    } catch(e){}
                     try { renderDataTable('latest'); } catch(e){}
                     refreshDates();
                     mainInput.focus();
