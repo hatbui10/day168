@@ -279,6 +279,22 @@
             .btn-mini:hover { background: #475569; border-color: #94a3b8; color: #ffffff; }
             .btn-mini:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(148,163,184,.55); }
             .btn-mini:active { transform: translateY(1px); filter: brightness(.92); }
+            /* ▼▼ DROPDOWN TỰ VẼ (dùng thay <select> gốc: trình duyệt chặn popup của select trong iframe/khung xem) */
+            .dd-wrap { position: relative; display: inline-block; }
+            .dd-btn { background:#0b1220; color:#f0abfc; border:2px solid #7e22ce; border-radius:6px;
+                padding:5px 10px; font-weight:bold; font-size:13px; cursor:pointer; font-family:inherit;
+                white-space:nowrap; line-height:1.2; }
+            .dd-btn:hover { filter: brightness(1.18); }
+            .dd-btn:active { transform: translateY(1px); }
+            .dd-btn.green { color:#4ade80; border-color:#16a34a; }
+            .dd-list { position:absolute; z-index:99999; top:calc(100% + 3px); left:0; min-width:100%;
+                background:#0b1220; border:2px solid #7e22ce; border-radius:6px;
+                box-shadow:0 8px 22px rgba(0,0,0,.65); overflow:hidden; }
+            .dd-item { padding:6px 12px; font-size:12px; color:#e0e0e0; cursor:pointer;
+                white-space:nowrap; font-family:inherit; background:#0b1220; }
+            .dd-item:hover { background:#1e2a4a; color:#ffffff; }
+            .dd-item.on { background:#4a1942; color:#f0abfc; font-weight:bold; }
+            .dd-hidden-sel { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; left:-9999px; }
             /* hàng công cụ Firebase của kho lịch sử */
             .fb-row { display: flex; gap: 6px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
             .fb-row span { font-size: 11px; color: #9fd0ff; flex: 1; min-width: 120px; word-break: break-word; }
@@ -672,7 +688,17 @@
                     <div style="background:#0b1220;border:1px solid #4c1d95;border-radius:8px;padding:6px 8px;margin-bottom:6px">
                         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:5px">
                             <label style="font-size:11px;color:#e9d5ff;font-weight:bold">Số ô nhập:</label>
-                            <select id="segLen" onchange="onSegLenChange()" style="background:#0b1220;color:#f0abfc;border:2px solid #7e22ce;border-radius:6px;padding:5px 8px;font-weight:bold;font-size:13px;cursor:pointer;font-family:inherit">
+                            <span class="dd-wrap">
+                                <button type="button" class="dd-btn" id="segLenBtn">2 ô ▾</button>
+                                <div class="dd-list" id="segLenList" style="display:none">
+                                    <div class="dd-item" data-val="2">2 ô</div>
+                                    <div class="dd-item" data-val="3">3 ô</div>
+                                    <div class="dd-item" data-val="4">4 ô</div>
+                                    <div class="dd-item" data-val="5">5 ô</div>
+                                    <div class="dd-item" data-val="6">6 ô</div>
+                                </div>
+                            </span>
+                            <select id="segLen" class="dd-hidden-sel" onchange="onSegLenChange()">
                                 <option value="2" selected>2 ô</option>
                                 <option value="3">3 ô</option>
                                 <option value="4">4 ô</option>
@@ -683,7 +709,15 @@
                         </div>
                         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:5px">
                             <label style="font-size:11px;color:#e9d5ff;font-weight:bold">Sắp xếp kết quả:</label>
-                            <select id="segSort" onchange="onSegSortChange()" style="background:#0b1220;color:#4ade80;border:2px solid #16a34a;border-radius:6px;padding:5px 8px;font-weight:bold;font-size:12px;cursor:pointer;font-family:inherit">
+                            <span class="dd-wrap">
+                                <button type="button" class="dd-btn green" id="segSortBtn">🆔 Kỳ lớn nhất trên cùng ▾</button>
+                                <div class="dd-list" id="segSortList" style="display:none">
+                                    <div class="dd-item" data-val="issue">🆔 Kỳ lớn nhất trên cùng</div>
+                                    <div class="dd-item" data-val="value">🔢 Số lớn nhất trên cùng</div>
+                                    <div class="dd-item" data-val="sum">➕ Tổng lớn nhất trên cùng</div>
+                                </div>
+                            </span>
+                            <select id="segSort" class="dd-hidden-sel" onchange="onSegSortChange()">
                                 <option value="issue" selected>🆔 Kỳ lớn nhất trên cùng</option>
                                 <option value="value">🔢 Số lớn nhất trên cùng</option>
                                 <option value="sum">➕ Tổng lớn nhất trên cùng</option>
@@ -3380,6 +3414,52 @@
                         }
                         return false;
                     }
+                    /* ▼▼ DROPDOWN TỰ VẼ — thay cho <select> gốc (select gốc bị trình duyệt chặn popup
+                        khi mở trong khung xem/iframe, bấm không hiện danh sách) ▼▼ */
+                    function ddCloseAll(exceptId) {
+                        const lists = document.querySelectorAll('.dd-list');
+                        for (let i = 0; i < lists.length; i++) {
+                            if (!exceptId || lists[i].id !== exceptId) lists[i].style.display = 'none';
+                        }
+                    }
+                    function ddSync(selId) {
+                        const sel = document.getElementById(selId);
+                        if (!sel) return;
+                        const btn = document.getElementById(selId + 'Btn');
+                        const list = document.getElementById(selId + 'List');
+                        const opt = sel.options ? sel.options[sel.selectedIndex] : null;
+                        if (btn) btn.textContent = ((opt ? opt.textContent : String(sel.value)) + ' ▾');
+                        if (list) {
+                            const items = list.querySelectorAll('.dd-item');
+                            for (let i = 0; i < items.length; i++) {
+                                items[i].classList.toggle('on', items[i].getAttribute('data-val') === String(sel.value));
+                            }
+                        }
+                    }
+                    function ddInit(selId) {
+                        const sel = document.getElementById(selId);
+                        const btn = document.getElementById(selId + 'Btn');
+                        const list = document.getElementById(selId + 'List');
+                        if (!sel || !btn || !list) return;
+                        btn.addEventListener('click', function (e) {
+                            e.stopPropagation();
+                            const open = list.style.display !== 'none';
+                            ddCloseAll(open ? null : list.id);
+                            list.style.display = open ? 'none' : 'block';
+                            ddSync(selId);
+                        });
+                        list.addEventListener('click', function (e) {
+                            const t = e.target;
+                            const it = (t && t.closest) ? t.closest('.dd-item') : null;
+                            if (!it) return;
+                            sel.value = it.getAttribute('data-val');
+                            try { sel.dispatchEvent(new Event('change')); } catch (err) {}
+                            list.style.display = 'none';
+                            ddSync(selId);
+                        });
+                        ddSync(selId);
+                    }
+                    document.addEventListener('click', function () { ddCloseAll(null); });
                     function onSegLenChange() {
                         try {
                             renderSegInputs(false);
@@ -3387,6 +3467,7 @@
                             // chọn xong số ô -> tự lấy các số cuối cùng trong bảng -> hiện kết quả, khỏi nhập tay
                             // (KHÔNG tự focus: bàn phím chỉ bật khi nào bấm vào ô nhập)
                             segTakeLast();
+                            ddSync('segLen');
                         } catch (e) {}
                     }
                     // Tìm mọi đoạn (n+3) số liền nhau có n số đầu đúng như nhập (mới nhất trước)
@@ -3468,6 +3549,7 @@
                         segSortMode = (el && el.value) ? el.value : 'value';
                         try { localStorage.setItem('vn168_segSort', segSortMode); } catch (e) {}
                         updateSegSortInfo();
+                        ddSync('segSort');
                         try { renderDataTable(dataTableMode); } catch (e) {}
                     }
                     function updateSegSortInfo() {
@@ -3661,7 +3743,8 @@
                                 ? ('Kho đang có <b>' + gameArchive.length + '</b> kỳ — nhập ' + segPrefixLen() + ' số ở trên để tra đoạn ' + segTotalLen() + ' số.')
                                 : (segMeta && segMeta.count
                                     ? ('Kho đang ở <b>Firebase</b> (' + Number(segMeta.count).toLocaleString('vi-VN') + ' kỳ) — chọn số ô nhập hoặc bấm "🧾 Lấy số", kết quả hiện liền, <b>không cần tải kho về</b>.')
-                                    : 'Kho trống — bấm "⬇️ Tải 100 trang" (cần token API).'))
+                                    : 'Kho trống — bấm "⬇️ Tải 100 trang" (cần token API).'
+                                        + '<br><span style="color:#64748b">Nếu đang mở trong khung xem thử (không có mạng, localStorage riêng) thì kho sẽ luôn là 0 — hãy mở file này bằng trình duyệt để thấy kho đã lưu (50.000+ kỳ).</span>'))
                             + '</div>';
                         body.innerHTML = html;
                         dataTableLastLen = gameArchive.length;
@@ -6709,7 +6792,9 @@
                         const ss = document.getElementById('segSort');
                         if (ss) ss.value = segSortMode;
                         updateSegSortInfo();
+                        ddSync('segSort');
                     } catch(e){}
+                    try { ddInit('segLen'); ddInit('segSort'); } catch(e){}
                     try { renderDataTable('latest'); } catch(e){}
                     refreshDates();
                     mainInput.focus();
@@ -6763,4 +6848,4 @@
                         });
                 </script>
    
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4afc9be1be8e2fa',t:'MTc5MjA3NzQxOQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
