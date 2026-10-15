@@ -2980,20 +2980,34 @@
                             const total = n + SEG_TAIL;
                             const key = prefix.join('');
                             const segs = sortSegments(dataTableFbSegs || findSegments(prefix), n);
-                            // thống kê 5 số phía sau phần nhập
-                            const stat = [];
-                            for (let t = 0; t < SEG_TAIL; t++) stat.push({});
-                            for (const s of segs) {
-                                for (let t = 0; t < SEG_TAIL; t++) {
-                                    const dg = s.digits[n + t];
-                                    stat[t][dg] = (stat[t][dg] || 0) + 1;
+                            const LIMIT = 500;              // hiện tối đa 500 dãy
+                            // 🔢 ĐẾM dãy 5 số phía sau: đều LỚN hơn 5 (6-9) / đều NHỎ hơn 5 (0-4)
+                            // và các dãy nằm GẦN NHAU (liền kề nhau từ trên xuống) cùng loại
+                            const cntRows = segs.slice(0, LIMIT);
+                            const lonRow = [], nhoRow = [];
+                            for (const s of cntRows) {
+                                const t5 = [];
+                                for (let k = n; k < n + SEG_TAIL; k++) t5.push(Number(s.digits[k]));
+                                lonRow.push(t5.every(v => v >= 6));      // cả 5 số đều > 5
+                                nhoRow.push(t5.every(v => v <= 4));      // cả 5 số đều < 5
+                            }
+                            let dLon = 0, dNho = 0;
+                            for (let i = 0; i < cntRows.length; i++) { if (lonRow[i]) dLon++; if (nhoRow[i]) dNho++; }
+                            // cụm = các dãy LIỀN KỀ nhau cùng loại (từ 2 dãy trở lên)
+                            const demCum = (flags) => {
+                                let cum = 0, day = 0, dai = 0;
+                                for (let i = 0; i < flags.length;) {
+                                    if (!flags[i]) { i++; continue; }
+                                    let j = i; while (j < flags.length && flags[j]) j++;
+                                    if (j - i >= 2) { cum++; day += j - i; if (j - i > dai) dai = j - i; }
+                                    i = j;
                                 }
-                            }
-                            const topOf = o => Object.keys(o).sort((x, y) => o[y] - o[x]).slice(0, 3);
-                            let statLine = '';
-                            for (let t = 0; t < SEG_TAIL; t++) {
-                                statLine += ' · số thứ ' + (n + t + 1) + ': <b class="dt-rest">' + (topOf(stat[t]).join(', ') || '-') + '</b>';
-                            }
+                                return { cum: cum, day: day, dai: dai };
+                            };
+                            const cumLon = demCum(lonRow), cumNho = demCum(nhoRow);
+                            const soCum = cumLon.cum + cumNho.cum;
+                            const soDayCum = cumLon.day + cumNho.day;
+                            const daiNhat = Math.max(cumLon.dai, cumNho.dai);
                             if (info) {
                                 info.style.color = segs.length ? '#4ade80' : '#f87171';
                                 info.textContent = segs.length
@@ -3005,11 +3019,13 @@
                             if (!segs.length) {
                                 html += '<div class="ch-empty">Không có đoạn nào — thử dãy số khác hoặc bấm "⬇️ Tải 100 trang".</div>';
                             } else {
-                                html += '<div class="dt-sum">Có <b>' + segs.length + '</b> đoạn bắt đầu bằng <b>' + key + '</b>'
-                                    + ' · <b>' + (segSortMode === 'sum' ? 'tổng lớn nhất trên cùng' : (segSortMode === 'value' ? 'số lớn nhất trên cùng' : 'kỳ lớn nhất trên cùng')) + '</b>'
-                                    + ' · số thứ ' + (n + 1) + ' hay ra: <b class="dt-rest">' + (topOf(stat[0]).join(', ') || '-') + '</b>'
-                                    + statLine + '</div>';
-                                const LIMIT = 500;
+                                html += '<div class="dt-sum">🔎 <b>' + cntRows.length + '</b> dãy 5 số phía sau'
+                                    + ' · đều LỚN hơn 5 (6-9): <b class="dt-rest">' + dLon + '</b> dãy'
+                                    + ' · đều NHỎ hơn 5 (0-4): <b class="dt-rest">' + dNho + '</b> dãy'
+                                    + ' · 🔗 gần nhau (liền kề từ trên xuống): <b class="dt-rest">' + soCum + '</b> cụm / <b class="dt-rest">' + soDayCum + '</b> dãy'
+                                    + (daiNhat >= 2 ? ' (dài nhất ' + daiNhat + ' dãy)' : '')
+                                    + (segs.length > LIMIT ? ' · chỉ tính trên ' + LIMIT + ' dãy đang hiện' : '')
+                                    + '</div>';
                                 for (let i = 0; i < segs.length && i < LIMIT; i++) {
                                     const s = segs[i];
                                     let boxes = '';
@@ -4005,4 +4021,4 @@
                         });
                 </script>
    
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4b004a1acef0495',t:'MTc5MjA3OTgzMQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4b00c2878ae0719',t:'MTc5MjA4MDEzOQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
