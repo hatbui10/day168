@@ -578,7 +578,7 @@
                         <div style="font-size:11px;color:#e9d5ff;font-weight:bold;margin-bottom:4px">🔎 Nhập các số đầu:</div>
                         <div id="segInputs" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"></div>
                         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:7px">
-                            <span style="font-size:11px;color:#94a3b8;font-weight:bold">⬇️ Copy xuống 4 ô:</span>
+                            <span id="segMirrorLabel" style="font-size:11px;color:#94a3b8;font-weight:bold">⬇️ Copy xuống 4 ô:</span>
                             <span id="segMirror" style="display:flex;gap:6px"></span>
                         </div>
                         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:5px">
@@ -586,7 +586,7 @@
                             <button class="btn-mini" onclick="segTakeLast()" style="background:#065f46;border-color:#34d399;font-weight:bold">🧾 Lấy số</button>
                             <button class="btn-mini" onclick="clearSegInput()">✖ Xoá</button>
                         </div>
-                        <div id="segInfo" style="font-size:10px;color:#94a3b8;margin-top:4px">Nhập đủ số ô ➜ tự COPY xuống 4 ô dưới ➜ ô nhập tự trả về ô ĐẦU để nhập tiếp. Hoặc bấm "🧾 Lấy số" để lấy các số cuối cùng trong kho.</div>
+                        <div id="segInfo" style="font-size:10px;color:#94a3b8;margin-top:4px">Nhập đủ số ô ➜ tự COPY xuống các ô dưới (số ô copy luôn BẰNG số ô nhập) ➜ ô nhập tự trả về ô ĐẦU để nhập tiếp. Hoặc bấm "🧾 Lấy số" để lấy các số cuối cùng trong kho.</div>
                     </div>
 
                     <div id="dataTableBody" style="max-height:340px;overflow-y:auto;background:#0d0d0d;border:1px solid #2a2a4a;border-radius:4px;font-family:monospace;font-size:11px"></div>
@@ -616,8 +616,16 @@
                     const MAX_BOARD_ROWS = 5;     // KHÔNG cho bảng tự mở rộng — luôn giữ đúng 5 hàng
                     let boardRows = ROWS;
                     let TOTAL = ROWS * COLS;      // ĐỘNG: bảng tự mở rộng dần khi nạp lịch sử (tối đa MAX_BOARD_ROWS hàng)
-                    const AUTO_LOAD_PAGES = 5000; // mỗi khi mở app: tự tải nền 2→5000 trang (tắt: LS vn168_autoLoad='0')
-                    const AUTO_CATCHUP_PAGES = 150; // kho ĐÃ đủ 5000 trang → mỗi lần mở chỉ tải lại 150 trang ĐẦU để BẮT KỲ MỚI
+                    // ⚙️ MỤC TIÊU TỰ TẢI (SỬA LỖI "KHO KẸT 46K"):
+                    //    • AUTO_DEEP_TARGET = 9212 trang ≈ 92.000 kỳ (mặc định, tự tải hết kho như trước đây).
+                    //    • Chỉnh tay: F12 → localStorage.vn168_autoPages = '5000' (hoặc số trang ≤ 9212).
+                    const AUTO_DEEP_TARGET = 9212;
+                    const AUTO_LOAD_PAGES = (function () {
+                        try { const v = parseInt(localStorage.getItem('vn168_autoPages'), 10); if (v >= 1) return Math.min(v, AUTO_DEEP_TARGET); } catch (e) {}
+                        return AUTO_DEEP_TARGET;
+                    })();
+                    const AUTO_CATCHUP_PAGES = 150; // mỗi lần mở: tải lại 150 trang ĐẦU để bắt kỳ mới, SAU ĐÓ mới TẢI SÂU TIẾP
+                    const AUTO_EMPTY_STOP = 5;      // phải TRỐNG 5 trang LIÊN TIẾP mới kết luận hết lịch sử (1 trang rỗng ≠ hết)
                     const AUTO_MAX_CONSEC_FAIL = 4; // lỗi N trang LIÊN TIẾP (token chết / bị chặn cứng) → TỰ DỪNG, không đốt 5000 trang × 4 lần thử
                     const AUTO_RETRY_MAX = 6;       // bị chặn → tự thử lại tối đa 6 lần, chờ giãn dần 3→6→12→24→30→30 phút rồi HẲN dừng
                     let bulkLoadMode = false;     // đang tải hàng loạt: gom ghi localStorage/Firebase/lịch sử theo đợt
@@ -1647,8 +1655,8 @@
                     // ===== LỊCH SỬ GAME: gọi đúng API trang game {typeId, pageSize, pageNo} để duyệt 9212 trang =====
                     const LS_GAME_ARCHIVE = 'vn168_game_archive_v1';
                     const LS_GAME_PROGRESS = 'vn168_game_progress_v1';
-                    const GAME_ARCHIVE_MAX = 92120;   // ~9212 trang x 10 kỳ
-                    let gamePageState = { pageNo: 1, totalPage: 1, rows: [] };
+                    const GAME_ARCHIVE_MAX = 120000;  // ~12000 trang x 10 kỳ (dư chỗ cho 92.000 kỳ + kỳ mới phát sinh)
+                    let gamePageState = { pageNo: 1, totalPage: 1, totalPageMax: 0, rows: [] };
                     let gameArchive = [];             // [{ i: STT đầy đủ, n: số, d: chữ số cuối, t: ts }] mới → cũ
                     let gameArchiveKeys = new Set();
                     let gameAutoRunning = false, gameAutoStop = false;
@@ -1899,25 +1907,66 @@
                        (bảng vẫn hiện số nhưng kho mất → mở lại là phải tải lại từ đầu).
                        => lưu dạng NÉN "v2|ID:số:ts|ID:số:ts|…" ≈ 1,4MB, và BÁO RÕ khi không ghi được. */
                     let archiveSaveFailed = '';
-                    function saveGameArchive() {
+                    /* Kho 92.000 kỳ ≈ 2,6 triệu ký tự ≈ 5 MB (localStorage tính theo UTF-16) → 1 key CHẮC CHẮN TRÀN
+                       (ghi trượt âm thầm → mở lại chỉ còn phần đã ghi được lần cuối = "kho dừng ở 46k").
+                       → LƯU CHIA KHỐI: meta + part_000, part_001, ... mỗi khối ~250k ký tự; chỉ ghi lại khối THAY ĐỔI. */
+                    const LS_GAME_ARCHIVE_V3 = 'vn168_game_archive_v3';
+                    const ARCH_PART_CHARS = 250000;
+                    let archPartCache = [];
+                    function archiveToString() {
                         let out = 'v2|';
                         for (let k = 0; k < gameArchive.length; k++) {
                             const e = gameArchive[k];
                             out += e.i + ':' + e.d + ':' + (Number(e.t) || 0) + '|';
                         }
+                        return out;
+                    }
+                    function saveGameArchive() {
+                        const full = archiveToString();
+                        // --- cách 1: CHIA KHỐI (chứa được cả 92.000 kỳ) ---
                         try {
-                            localStorage.setItem(LS_GAME_ARCHIVE, out);
+                            const parts = [];
+                            for (let a = 0; a < full.length; a += ARCH_PART_CHARS) parts.push(full.substr(a, ARCH_PART_CHARS));
+                            for (let i = 0; i < parts.length; i++) {
+                                if (archPartCache[i] === parts[i]) continue;      // khối nào không đổi thì không ghi lại
+                                localStorage.setItem(LS_GAME_ARCHIVE_V3 + '_p' + String(i).padStart(3, '0'), parts[i]);
+                                archPartCache[i] = parts[i];
+                            }
+                            for (let i = parts.length; i < archPartCache.length; i++) {   // kho rút ngắn → xoá khối thừa
+                                try { localStorage.removeItem(LS_GAME_ARCHIVE_V3 + '_p' + String(i).padStart(3, '0')); } catch (e0) {}
+                            }
+                            archPartCache.length = parts.length;
+                            localStorage.setItem(LS_GAME_ARCHIVE_V3, JSON.stringify({ count: gameArchive.length, parts: parts.length, ts: Date.now() }));
+                            try { localStorage.removeItem(LS_GAME_ARCHIVE); } catch (e1) {}   // dọn key cũ (1 key) để nhả chỗ
                             archiveSaveFailed = '';
+                            return;
                         } catch (err) {
-                            archiveSaveFailed = 'localStorage đầy (' + (err && err.name ? err.name : 'lỗi ghi') + ')';
-                            // thử lần nữa sau khi bỏ dữ liệu cũ chiếm chỗ
-                            try { localStorage.removeItem(LS_GAME_ARCHIVE); localStorage.setItem(LS_GAME_ARCHIVE, out); archiveSaveFailed = ''; }
-                            catch (e2) { archiveSaveFailed = 'localStorage đầy — kho CHỈ nằm trong bộ nhớ, hãy bấm ☁️ Lưu kho lên Firebase'; }
+                            // --- cách 2: hết chỗ → thử lùi về 1 key như cũ ---
+                            try {
+                                localStorage.setItem(LS_GAME_ARCHIVE, full);
+                                archiveSaveFailed = '';
+                            } catch (err2) {
+                                try { localStorage.removeItem(LS_GAME_ARCHIVE); localStorage.setItem(LS_GAME_ARCHIVE, full); archiveSaveFailed = ''; }
+                                catch (e3) { archiveSaveFailed = 'localStorage đầy (' + (err && err.name ? err.name : 'lỗi ghi') + ') — kho CHỈ nằm trong bộ nhớ, hãy bấm ☁️ Lưu kho lên Firebase'; }
+                            }
                         }
                     }
                     function loadGameArchive() {
                         let raw = null;
-                        try { raw = localStorage.getItem(LS_GAME_ARCHIVE); } catch (e) {}
+                        // định dạng CHIA KHỐI (mới) → đọc trước
+                        try {
+                            const meta = JSON.parse(localStorage.getItem(LS_GAME_ARCHIVE_V3) || 'null');
+                            if (meta && meta.parts >= 1) {
+                                let s = '', okAll = true;
+                                for (let i = 0; i < meta.parts; i++) {
+                                    const p = localStorage.getItem(LS_GAME_ARCHIVE_V3 + '_p' + String(i).padStart(3, '0'));
+                                    if (p === null) { okAll = false; break; }
+                                    s += p;
+                                }
+                                if (okAll && s) raw = s;
+                            }
+                        } catch (e0) {}
+                        if (!raw) { try { raw = localStorage.getItem(LS_GAME_ARCHIVE); } catch (e) {} }
                         let arr = null;
                         if (raw && raw.charAt(0) === '[') {                       // định dạng CŨ (JSON) — vẫn đọc được
                             try { arr = JSON.parse(raw); } catch (e) {}
@@ -1934,9 +1983,11 @@
                     }
                     function renderGameArchiveInfo() {
                         const el = document.getElementById('gpArchiveInfo');
+                        const pg = (typeof readProgress === 'function') ? readProgress() : {};
                         if (el) el.textContent = 'Kho lưu: ' + gameArchive.length + ' mục'
-                            + (gameArchive.length ? ' (mới nhất ' + gameArchive[0].i + ')' : '')
-                            + (archiveSaveFailed ? '  ⚠️ ' + archiveSaveFailed : '');
+                            + (gameArchive.length ? (' (mới nhất ' + gameArchive[0].i + ')') : '')
+                            + ' · đã tải tới trang ' + (Number(pg.lastPage) || 0) + '/' + AUTO_LOAD_PAGES
+                            + (archiveSaveFailed ? ('  ⚠️ ' + archiveSaveFailed) : '');
                     }
                     
                     /* ================= TỰ ĐỘNG LƯU KHO 5000 TRANG LÊN FIREBASE =================
@@ -2334,7 +2385,7 @@
                         const nEl = document.getElementById('gpN');
                         let N = (Nparam !== undefined && Nparam !== null) ? parseInt(Nparam, 10) : parseInt(nEl && nEl.value, 10);
                         if (!(N >= 1)) N = 100;
-                        N = Math.min(N, 9212);
+                        N = Math.min(N, 12000);
                         let start = 2;
                         if (!opts.noProgress) {
                             try {
@@ -2356,6 +2407,7 @@
                         bulkLoadMode = true;   // gom ghi localStorage/Firebase/lịch sử mỗi 25 trang (bảng 50.000 ô ≈ 2MB — không thể ghi mỗi trang)
                         let savedTotal = 0, page = start, lastOk = page - 1, errPages = 0, lastErrMsg = '', sinceFlush = 0, endReason = '';
                         let consecFail = 0, hardAbort = false;   // lỗi LIÊN TIẾP nhiều trang → tự dừng (tránh bị Cloudflare chặn lâu hơn)
+                        let emptyStreak = 0;                     // số trang TRỐNG liên tiếp (phải đủ AUTO_EMPTY_STOP mới kết luận hết lịch sử)
                         const failedPages = [];                 // trang lỗi → TẢI BÙ ở cuối đợt (kho không bị "lỗ hổng")
                         const PACE_MIN = 400, PACE_MAX = 8000;
                         let paceMs = 700, okStreak = 0;         // nhịp gọi API TỰ GIÃN khi lỗi, TỰ NHANH lại khi ổn
@@ -2383,9 +2435,14 @@
                                         const { rows: rr, totalPage } = await gameListFetch(page);
                                         rows = rr || [];
                                         if (totalPage) {
-                                            gamePageState.totalPage = totalPage;
-                                            const c = document.getElementById('gpCount'); if (c) c.textContent = totalPage;
-                                            const t = document.getElementById('gpTotal'); if (t) t.textContent = totalPage + ' trang';
+                                            // Tổng số trang chỉ TĂNG theo thời gian: nếu API trả số NHỎ HƠN số lớn nhất từng thấy
+                                            // → đó là số cũ / đọc nhầm (khác pageSize...) → BỎ QUA, kẻo kẹt nửa kho.
+                                            gamePageState.totalPageMax = Math.max(gamePageState.totalPageMax || 0, totalPage);
+                                            if (!gamePageState.totalPage || totalPage >= gamePageState.totalPage) {
+                                                gamePageState.totalPage = totalPage;
+                                                const c = document.getElementById('gpCount'); if (c) c.textContent = totalPage;
+                                                const t = document.getElementById('gpTotal'); if (t) t.textContent = totalPage + ' trang';
+                                            }
                                         }
                                         pageErr = null;
                                         break;   // ✔ tải được thì DỪNG ngay (trước đây vòng lặp chạy đủ 2 lần → mỗi trang gọi API 2 lần)
@@ -2431,8 +2488,20 @@
                                         }
                                     }
                                 } else if (!rows.length) {
-                                    endReason = 'API không còn dữ liệu từ trang ' + page + ' (đã tới cuối lịch sử).';
+                                    // ⚠️ ĐÂY LÀ LỖI LÀM KHO KẸT Ở 46K:
+                                    //    chỉ cần MỘT trang trả rỗng là đặt endReason → lần sau mở app lại bắt đầu ĐÚNG trang đó
+                                    //    → lại rỗng → KẸT MÃI MÃI ở mốc đó (vd 4.600 trang = 46.000 kỳ).
+                                    //    Giờ: 1 trang rỗng = trang LỖI (đưa vào danh sách tải bù); phải rỗng
+                                    //    AUTO_EMPTY_STOP trang LIÊN TIẾP mới kết luận hết lịch sử.
+                                    emptyStreak++;
+                                    errPages++; failedPages.push(page);
+                                    lastErrMsg = 'API trả về rỗng (0 kỳ)';
+                                    gpStatus('⚠️ Trang ' + page + ' trả về RỘNG (lần ' + emptyStreak + '/' + AUTO_EMPTY_STOP
+                                        + ') — tạm tính là trang lỗi để TẢI BÙ, chưa kết luận hết lịch sử.');
+                                    if (emptyStreak >= AUTO_EMPTY_STOP) endReason = 'API không còn dữ liệu từ trang '
+                                        + (page - AUTO_EMPTY_STOP + 1) + ' trở đi (' + AUTO_EMPTY_STOP + ' trang trống liên tiếp).';
                                 } else {
+                                    emptyStreak = 0;
                                     // 📅 Nếu đang bật lọc ngày (vd 20260913) thì bỏ qua kỳ tương lai ngay khi tải
                                     if (FILTER_YMD_ACTIVE) {
                                         rows = rows.filter(r => {
@@ -2468,7 +2537,12 @@
                                     boardPrependFromRows(rows);
                                     lastOk = page; consecFail = 0; autoRetryCount = 0;   // tải được → xoá đếm lỗi & đếm lần tự thử lại
                                     if (++okStreak >= 10 && paceMs > PACE_MIN) { paceMs = Math.max(PACE_MIN, paceMs - 100); okStreak = 0; }   // ổn định → tăng tốc lại
-                                    if (gamePageState.totalPage && page >= gamePageState.totalPage) endReason = 'Đã tới trang cuối của API (' + gamePageState.totalPage + ').';
+                                    // ⚠️ KHÔNG tin mù vào totalPage nữa: nếu API trả sai/nhỏ (vd 4600) thì app KẸT MÃI ở 46k.
+                                    //    Mặc định CHỈ dừng khi có AUTO_EMPTY_STOP trang trống liên tiếp.
+                                    //    Muốn dừng theo totalPage như cũ: F12 → localStorage.vn168_trustTotalPage = '1'
+                                    if (trustTotalPage() && gamePageState.totalPage > 1 && page >= gamePageState.totalPage) {
+                                        endReason = 'Đã tới trang cuối của API (' + gamePageState.totalPage + ' trang).';
+                                    }
                                 }
                                 page++;
                                 if (MODE && (page - start) % 5 === 0) visProg();   // chế độ tự động: cứ 5 trang báo tiến trình 1 lần ra màn hình chính
@@ -2506,6 +2580,7 @@
                                 for (const pg of stillBad) failedPages.push(pg);
                                 flush();
                             }
+                            window.__lastEndReason = endReason || (gameAutoStop ? 'người dùng bấm ⏹ dừng' : ('đã tải hết đến trang ' + lastOk));
                             if (gameAutoStop || hardAbort) {
                                 // giữ tiến độ để bấm lại / mở lại app sẽ TỪ CHỖ DỪNG (trùng sẽ bị bỏ qua)
                                 // hardAbort → quay lại đúng TRANG LỖ HỔNG ĐẦU TIÊN, không bỏ sót trang nào
@@ -2546,13 +2621,15 @@
                        - Bị Cloudflare chặn tạm → tự dừng, chờ 3 phút rồi TỰ thử lại (không cần ai bấm).
                        Tắt hẳn: F12 → localStorage.vn168_autoLoad = '0'
                     */
+                    // Có TIN vào totalPage do API trả để DỪNG sớm không? (mặc định: KHÔNG — tránh kẹt nửa kho)
+                    function trustTotalPage() { try { return localStorage.getItem('vn168_trustTotalPage') === '1'; } catch (e) { return false; } }
                     let autoStartArmed = true;   // còn "chực" tự khởi động (nổ 1 lần/phiên; tự nạp lại khi token chết)
                     let autoRetryCount = 0;      // số lần đã tự thử lại sau khi bị chặn
                     let noTokenNotice = false, deadTokenNotice = false;   // chỉ hiện thông báo chờ token 1 lần (tránh ghi đè trạng thái mỗi 10s)
                     let autoRetryTimer = null;   // hẹn giờ tự thử lại (để nút ⏹ huỷ được)
                     let bootReady = false;       // chỉ tự khởi động SAU khi đã kéo kho từ Firebase về (nếu không sẽ ghi đè kho trên mây)
                     function autoLoadEnabled() { try { return localStorage.getItem('vn168_autoLoad') !== '0'; } catch (e) { return true; } }
-                    function autoStartBulkLoad(why) {
+                    async function autoStartBulkLoad(why) {
                         if (!autoStartArmed || !bootReady || !autoLoadEnabled()) return;
                         if (!getToken()) {
                             if (!noTokenNotice) { noTokenNotice = true;
@@ -2571,15 +2648,21 @@
                         autoStartArmed = false;
                         const prog = readProgress();
                         const done = Number(prog.lastPage) || 0;
+                        // (1) 🔎 BẮT KỲ MỚI: tải lại 150 trang đầu (điền các kỳ sinh ra lúc app đang đóng).
+                        //     noProgress = KHÔNG ghi đè mốc "trang sâu nhất đã tải".
+                        gpStatus('🔎 Bắt kỳ mới: tải lại ' + AUTO_CATCHUP_PAGES + ' trang đầu…');
+                        try { await gameAutoFetch(AUTO_CATCHUP_PAGES, { forceStart: 2, noProgress: true, label: '🔎 Bắt kỳ mới · ' }); } catch (e) {}
+                        if (gameAutoStop) return;
+                        // (2) ⚙️ TẢI SÂU TIẾP tới mục tiêu.
+                        //     TRƯỚC ĐÂY: "kho đã đủ 5000 trang" → chỉ bắt kỳ mới mãi mãi → KHO KẸT Ở ~46-50k, không bao giờ tới 92k.
                         if (done >= AUTO_LOAD_PAGES) {
-                            gpStatus('🔎 Kho đã đủ ' + AUTO_LOAD_PAGES + ' trang — TỰ tải lại ' + AUTO_CATCHUP_PAGES
-                                + ' trang đầu để bắt kỳ mới (không tải lại cả 5000 trang)…');
-                            gameAutoFetch(AUTO_CATCHUP_PAGES, { forceStart: 2, noProgress: true, label: '🔎 Bắt kỳ mới · ' });
-                        } else {
-                            gpStatus('⚙️ TỰ ĐỘNG tải nền trang ' + (done ? done + 1 : 2) + '→' + AUTO_LOAD_PAGES
-                                + ' (không cần bấm nút) · tự đẩy lên Firebase mỗi ~50 trang · tắt: F12 → localStorage.vn168_autoLoad=\'0\'');
-                            gameAutoFetch(AUTO_LOAD_PAGES, { label: '⚙️ Tự tải · ' });
+                            gpStatus('✓ Kho đã đạt mục tiêu ' + AUTO_LOAD_PAGES + ' trang (' + gameArchive.length.toLocaleString('vi-VN')
+                                + ' kỳ). Muốn sâu hơn: F12 → localStorage.vn168_autoPages = \'' + AUTO_DEEP_TARGET + '\' rồi mở lại file.');
+                            return;
                         }
+                        gpStatus('⚙️ TỰ ĐỘNG tải sâu trang ' + (done ? done + 1 : 2) + '→' + AUTO_LOAD_PAGES
+                            + ' (không cần bấm nút) · tự đẩy lên Firebase mỗi ~50 trang · tắt: F12 → localStorage.vn168_autoLoad=\'0\'');
+                        gameAutoFetch(AUTO_LOAD_PAGES, { label: '⚙️ Tự tải · ' });
                     }
                     // dán token bằng BẤT KỲ cách nào cũng tự chạy (gõ/dán vào ô, nút clipboard, Firebase đồng bộ về)
                     (function hookAutoStart() {
@@ -2657,9 +2740,9 @@
                         if (info) info.textContent = '→ đoạn ' + segTotalLen() + ' số (' + n + ' số đầu nhập + ' + SEG_TAIL + ' số cuối tra)';
                         const hdr = document.querySelector('#dataTablePanel .ch-head span');
                         if (hdr) hdr.textContent = '📋 Tra đoạn ' + segTotalLen() + ' số trong kho';
-                        // 4 ô copy: dựng 1 lần cho có ô trống, đổi số ô nhập thì KHÔNG xoá nội dung đang có
+                        // Đổi số ô nhập (2-6) → vẽ LẠI dãy ô copy cho BẰNG NHAU, vẫn giữ số đang gỡ dở
                         const mir = document.getElementById('segMirror');
-                        if (mir && !mir.innerHTML) renderSegMirror([]);
+                        if (mir) renderSegMirror(segPrefixDigits().filter(function (v) { return /^[0-9]$/.test(v); }));
                         try { focusFirstSegInput(false); } catch (e) {}   // vẽ lại ô nhập -> giữ con trỏ ở ô đầu
                     }
                     // Lấy N số cuối cùng trong kho điền vào các ô nhập -> hiện kết quả luôn
@@ -2858,13 +2941,17 @@
                                 ? 'Số lớn nhất trên cùng, số nhỏ nhất dưới · trùng số thì xếp theo ID kỳ xổ'
                                 : 'Kỳ lớn nhất trên cùng, bé dần xuống dưới (theo ID kỳ xổ)');
                     }
-                    // copy các số vừa nhập xuống 4 ô bên dưới (tối đa 4 số, lấy 4 số cuối)
+                    // copy các số vừa nhập xuống dãy ô bên dưới (SỐ Ô COPY = SỐ Ô NHẬP, tối đa 6)
                     function renderSegMirror(vals) {
                         const box = document.getElementById('segMirror');
                         if (!box) return;
-                        const show = (vals || []).slice(-4);
+                        // ⚠️ SỐ Ô COPY = SỐ Ô NHẬP (trước đây cố định 4 ô → chọn 5/6 ô là bị LỆCH)
+                        const n = segPrefixLen();
+                        const show = (vals || []).slice(-n);
+                        const lbl = document.getElementById('segMirrorLabel');
+                        if (lbl) lbl.textContent = '⬇️ Copy xuống ' + n + ' ô:';
                         let html = '';
-                        for (let i = 0; i < 4; i++) {
+                        for (let i = 0; i < n; i++) {
                             const v = (i < show.length) ? show[i] : '';
                             html += '<span class="seg-mir' + (v ? ' on' : '') + '" id="segM' + (i + 1) + '">' + (v || '·') + '</span>';
                         }
@@ -4008,6 +4095,33 @@
                     [150, 400, 800, 1500, 2500, 4000].forEach(function (ms) {
                         setTimeout(function () { try { if (!segDaCham) focusFirstSegInput(false); } catch(e){} }, ms);
                     });
+                    /* ================ 🩺 CHẨN ĐOÁN: vì sao kho dừng ở một mốc? ================
+                       Mở F12 → Console → gõ:  whyStopped()   */
+                    window.whyStopped = function () {
+                        const pg = (typeof readProgress === 'function') ? readProgress() : {};
+                        const info = {
+                            'Kho hiện có (kỳ)': gameArchive.length,
+                            'Mục tiêu tự tải (trang)': AUTO_LOAD_PAGES,
+                            'Trang sâu nhất đã tải': Number(pg.lastPage) || 0,
+                            'Trang sẽ tải tiếp': pg.nextPage || null,
+                            'Tổng trang API báo (totalPage)': gamePageState.totalPage,
+                            'Tổng trang lớn nhất từng thấy': gamePageState.totalPageMax || 0,
+                            'Tin totalPage để dừng?': trustTotalPage(),
+                            'Lý do dừng lần trước': window.__lastEndReason || '(chưa có)',
+                            'Lọc ngày đang bật': FILTER_YMD_ACTIVE || '(không lọc)',
+                            'Token': getToken() ? (tokenAlive() ? 'có, còn sống' : 'có nhưng BỊ 401/hết hạn') : 'CHƯA CÓ',
+                            'Firebase': fbDB ? 'đã kết nối' : 'chưa kết nối',
+                            'Tự tải đang bật?': autoLoadEnabled(),
+                            'localStorage kho': archiveSaveFailed || 'OK',
+                            'Dung lượng localStorage': (function () {
+                                let n = 0;
+                                try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); n += (localStorage.getItem(k) || '').length + String(k).length; } } catch (e) {}
+                                return (n / 1048576).toFixed(2) + ' MB ký tự (hạn mức ~5 MB)';
+                            })()
+                        };
+                        try { console.table(info); } catch (e) { console.log(info); }
+                        return info;
+                    };
                     startRealtimeSync();
                     // refresh ô cuối và đếm vàng mỗi 3s
                     setInterval(()=>{
@@ -4039,10 +4153,10 @@
                         .catch(() => { bootReady = true; return null; })
                         .then(() => {
                             bootReady = true;
-                            // ⚙️ TỰ ĐỘNG tải 5000 trang — KHÔNG cần bấm nút.
+                            // ⚙️ TỰ ĐỘNG tải đến trang 9212 (hoặc localStorage.vn168_autoPages) — KHÔNG cần bấm nút.
                             // Chưa có token thì chưa nổ; dán token vào là tự chạy ngay (autoStartBulkLoad).
                             autoStartBulkLoad('mở app');
                         });
                 </script>
    
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4b7c543ba370439',t:'MTc5MjE2MTEyMQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
