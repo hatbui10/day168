@@ -468,6 +468,24 @@
                        font-size:20px; font-weight:bold; background:#0b1220; color:#475569;
                        border:2px dashed #334155; }
             .seg-mir.on { color:#f0abfc; border-style:solid; border-color:#7e22ce; background:#1e1b4b; }
+            /* ===== Khung LON/NHO: 1 = lon (5-9), 0 = nho (0-4) - nhom nao IT hon xep TRUOC ===== */
+            #segBsWrap { margin-top:8px; padding:8px 10px 9px; border-radius:12px;
+                         background:linear-gradient(180deg,#151d2e 0%,#0b1220 100%);
+                         border:1px solid #334155;
+                         box-shadow:inset 0 1px 0 rgba(255,255,255,.05), 0 4px 14px rgba(0,0,0,.35); }
+            #segBsWrap .bs-title { font-size:11px; color:#cbd5e1; font-weight:bold; margin-bottom:6px;
+                                   letter-spacing:.3px; }
+            #segBigSmall { gap:8px; }
+            .bs-cell { display:inline-flex; align-items:center; justify-content:center;
+                       width:48px; height:44px; box-sizing:border-box; border-radius:12px;
+                       font-size:22px; font-weight:800; line-height:1;
+                       box-shadow:0 3px 0 rgba(0,0,0,.45), 0 6px 12px rgba(0,0,0,.35),
+                                  inset 0 1px 0 rgba(255,255,255,.45); }
+            .bs-cell.lon { background:linear-gradient(160deg,#fffbeb 0%,#fde68a 25%,#fbbf24 55%,#f97316 80%,#dc2626 100%);
+                           color:#4a0d0d; text-shadow:0 1px 0 rgba(255,255,255,.55); }
+            .bs-cell.nho { background:linear-gradient(160deg,#f0f9ff 0%,#e0f2fe 25%,#7dd3fc 55%,#38bdf8 80%,#1d4ed8 100%);
+                           color:#052a4d; text-shadow:0 1px 0 rgba(255,255,255,.55); }
+            .bs-cell.bs-empty { background:#111827; color:#475569; border:2px dashed #334155; box-shadow:none; }
             .seg-in:hover { border-color:#a855f7; }
             .seg-in:focus { outline:none; border-color:#e879f9; box-shadow:0 0 0 3px rgba(217,70,239,.28); }
             
@@ -580,6 +598,14 @@
                         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:7px">
                             <span id="segMirrorLabel" style="font-size:11px;color:#94a3b8;font-weight:bold">⬇️ Copy xuống 4 ô:</span>
                             <span id="segMirror" style="display:flex;gap:6px"></span>
+                        </div>
+                        <div id="segBsWrap">
+                            <div class="bs-title" id="segBsTitle">🔢 LỚN / NHỎ — 5 số CUỐI BẢNG (mới nhất)</div>
+                            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                                <span id="segBigSmall" style="display:flex;gap:8px"></span>
+                            </div>
+                            <div id="segBsNote" style="font-size:10px;color:#94a3b8;margin-top:6px"></div>
+                            <div id="segBsLabel" style="display:none"></div>
                         </div>
                         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:5px">
                             <button class="btn-mini" onclick="findSegmentsFromInput()" style="background:#4a1942;border-color:#d946ef;font-weight:bold">🔎 Tìm đoạn</button>
@@ -746,6 +772,7 @@
                     function renderAll() {
                         for (let i = 0; i < TOTAL; i++) renderCell(i);
                         try { renderLastRow(); } catch(e){}
+                        try { refreshBigSmall(); } catch(e){}
                     }
                     function renderLastRow() {
                         const grid = document.getElementById('lastRowGrid');
@@ -805,6 +832,7 @@
                                 + 'Ô (5,10) = số '+ lastVal +' · STT '+lastStt+' · ID '+(lastFull||'(thiếu ID)')+'\n'
                                 + (source==='archive' ? 'Đang hiện từ KHO (bảng chưa xây)' : 'Hàng cuối STT từ '+stts[0]+' đến '+lastStt);
                         }
+
                     }
                     
                     function snapshot() {
@@ -2130,6 +2158,7 @@
                             const added = gameArchive.length - localCount;
                             fbArchiveSig = (added === 0 && localCount === remote.length) ? chunks.map((c, i) => chunkSig(i)) : [];
                             saveGameArchive(); renderGameArchiveInfo(); renderCellHistory();
+                            try { refreshBigSmall(); } catch(e0){}
                             fbArchStatus('☁️ Đã tải kho từ Firebase: ' + chunks.length + ' khối / ' + remote.length + ' kỳ'
                                 + (added > 0 ? (' · thêm ' + added + ' kỳ vào máy này') : '')
                                 + (lastPage ? (' · đã tải tới trang ' + lastPage + ' → lần này CHỈ tải tiếp từ trang ' + (lastPage + 1)) : '') + '.');
@@ -2722,6 +2751,114 @@
                             return e ? String(e.value || '').replace(/\D/g, '') : '';
                         });
                     }
+                    /* ============ KHUNG LỚN/NHỎ: 1 = lớn (5-9), 0 = nhỏ (0-4) ============
+                       Quy tắc: đếm trong các số đang xét, nhóm nào ÍT hơn xếp TRƯỜC.
+                         vd 5 2 3 6 4 → 2 lớn / 3 nhỏ → "1 1 0 0 0"
+                         vd 5 6 8 0 3 → 3 lớn / 2 nhỏ → "0 0 1 1 1"
+                       (số 5 tính là LỚN, giống cột Tài/Xỉu trong bảng dữ liệu kho)
+                       LUÔN 5 Ô — lấy 5 số MỚI NHẤT (được từ BẢNG, tự đổi mỗi kỳ), KHÔNG phụ thuộc số ô nhập */
+                    const BS_LEN = 5;
+                    let bsSrc = '';        // nguồn số đang dùng
+                    let bsTopIssue = '';   // ID kỳ cao nhất đang được dùng (khi lấy từ bảng kết quả)
+                    let bsPinned = false;  // đang "ghim" theo bảng kết quả → vòng 3s KHÔNG ghi đè
+                    /* 0-1 cho KỲ CAO NHẤT trong BẢNG KẾT QUẢ: lấy 5 số CUỐI của dòng đó. */
+                    function bsApplyResults(segs, n) {
+                        try {
+                            const list = (segs || []).filter(function (s) { return s && s.digits; });
+                            if (!list.length) { bsUnpin(); return; }
+                            let top = list[0];
+                            for (let i = 1; i < list.length; i++) if (segIssueCmp(list[i], top) > 0) top = list[i];
+                            const tail = segTailDigits(top, n).slice(-BS_LEN);
+                            if (!tail.length) { bsUnpin(); return; }
+                            bsSrc = 'cuối kỳ cao nhất';
+                            bsTopIssue = segIssueId(top);
+                            bsPinned = true;      // đặt TRƯỜ bsRender để tiêu đề đổi theo
+                            bsRender(tail);
+                        } catch (e) { try { console.warn('[BigSmall]', e); } catch (e2) {} }
+                    }
+                    function bsUnpin() { bsPinned = false; bsSrc = ''; bsTopIssue = ''; refreshBigSmall(); }
+                    function bsPattern(digits) {
+                        const lon = [], nho = [];
+                        for (let i = 0; i < digits.length; i++) {
+                            const d = Number(digits[i]);
+                            if (Number.isFinite(d) && d >= 5) lon.push(1); else nho.push(0);
+                        }
+                        let pat;
+                        if (lon.length === nho.length) pat = digits.map(function (v) { return (Number(v) >= 5) ? 1 : 0; });  // hoà: giữ nguyên thứ tự
+                        else pat = (lon.length < nho.length) ? lon.concat(nho) : nho.concat(lon);                            // nhóm ít hơn lên TRƯỚC
+                        return { pat: pat, lon: lon.length, nho: nho.length, tie: (lon.length === nho.length) };
+                    }
+                    function bsRender(vals) {
+                        const box = document.getElementById('segBigSmall');
+                        if (!box) return;
+                        const lbl = document.getElementById('segBsLabel');
+                        const note = document.getElementById('segBsNote');
+                        const digits = (vals || []).map(function (v) { return String(v === null || v === undefined ? '' : v).replace(/\D/g, ''); })
+                                                  .filter(function (v) { return v !== ''; });
+                        const r = digits.length ? bsPattern(digits) : { pat: [], lon: 0, nho: 0, tie: false };
+                        let html = '';
+                        for (let i = 0; i < BS_LEN; i++) {
+                            if (i < r.pat.length) {
+                                const v = r.pat[i];
+                                html += '<span class="bs-cell ' + (v ? 'lon' : 'nho') + '" title="'
+                                      + (v ? 'LỚN (5-9)' : 'NHỎ (0-4)') + '">' + v + '</span>';
+                            } else {
+                                html += '<span class="bs-cell bs-empty" title="chưa đủ 5 số">·</span>';
+                            }
+                        }
+                        box.innerHTML = html;
+                        const ttl = document.getElementById('segBsTitle');
+                        if (ttl) ttl.textContent = '🔢 LỚN / NHỎ — '
+                            + (bsPinned ? ('5 số CUỐI của KỲ CAO NHẤT trong bảng')
+                                       : ('5 số ' + (bsSrc || 'mới nhất')));
+                        if (lbl) lbl.textContent = '🔢 Lớn/Nhỏ (' + digits.length + ' số · '
+                            + r.lon + ' lớn / ' + r.nho + ' nhỏ):';
+                        if (note) note.textContent = digits.length
+                            ? ((bsTopIssue ? ('Kỳ ' + bsTopIssue + '  ·  ') : '')
+                               + '5 số ' + (bsSrc || 'mới nhất') + ': ' + digits.join(' ') + '  →  '
+                               + (r.lon === 0 ? 'toàn NHỎ (0-4)'
+                                  : (r.nho === 0 ? 'toàn LỚN (5-9)'
+                                     : (r.tie ? 'số lượng bằng nhau → giữ nguyên thứ tự'
+                                        : (r.lon < r.nho ? 'Lớn ít hơn → 1 đứng trước'
+                                                        : 'Nhỏ ít hơn → 0 đứng trước')))))
+                            : '· chưa có số trong kho ·';
+                    }
+                    /* 5 số MỚI NHẤT (cuối bảng) — đổi ngay khi có kỳ mới rơi.
+                       LƯU Ý: số mới rơi CHỈ đi vào BẢNG (pushValueRaw), KHÔNG vào kho
+                       (kho chỉ được nạp bởi tải trang / bắt kỳ mới) → phải đọc từ BẢNG trước. */
+                    function bsDigitsNewest() {
+                        // 1) BẢNG CHÍNH: 5 ô CUỐI = 5 kỳ mới nhất (đang xếp cũ → mới)
+                        const b = [];
+                        try {
+                            for (let i = TOTAL - 1; i >= 0 && b.length < BS_LEN; i--) {
+                                const c = cells[i];
+                                if (c && /^[0-9]$/.test(String(c.value || ''))) b.push(String(c.value));
+                            }
+                        } catch (e) {}
+                        if (b.length) { bsSrc = 'cuối bảng'; return b.reverse(); }   // đang mới → cũ, đảo lại cũ → mới
+                        // 2) lịch sử số đi qua ô (5,10): mới nhất ở đầu
+                        const h = [];
+                        try {
+                            for (let i = 0; i < cellHistory.length && h.length < BS_LEN; i++) {
+                                const c = cellHistory[i];
+                                if (c && /^[0-9]$/.test(String(c.d))) h.push(String(c.d));
+                            }
+                        } catch (e) {}
+                        if (h.length) { bsSrc = 'lịch sử ô'; return h.reverse(); }
+                        // 3) kho (chỉ có khi đã tải trang): mới nhất ở đầu
+                        const out = [];
+                        for (let i = 0; i < gameArchive.length && out.length < BS_LEN; i++) {
+                            const e = gameArchive[i];
+                            if (e && /^[0-9]$/.test(String(e.d))) out.push(String(e.d));
+                        }
+                        bsSrc = out.length ? 'trong kho' : '';
+                        return out.reverse();
+                    }
+                    function refreshBigSmall() {
+                        if (bsPinned) return;               // đang hiện theo bảng kết quả → đợi yêu cầu mới
+                        try { bsRender(bsDigitsNewest()); }
+                        catch (e) { try { console.warn('[BigSmall]', e); } catch (e2) {} }
+                    }
                     function renderSegInputs(keepValues) {
                         const box = document.getElementById('segInputs');
                         if (!box) return;
@@ -2743,6 +2880,7 @@
                         // Đổi số ô nhập (2-6) → vẽ LẠI dãy ô copy cho BẰNG NHAU, vẫn giữ số đang gỡ dở
                         const mir = document.getElementById('segMirror');
                         if (mir) renderSegMirror(segPrefixDigits().filter(function (v) { return /^[0-9]$/.test(v); }));
+                        bsUnpin();
                         try { focusFirstSegInput(false); } catch (e) {}   // vẽ lại ô nhập -> giữ con trỏ ở ô đầu
                     }
                     // Lấy N số cuối cùng trong kho điền vào các ô nhập -> hiện kết quả luôn
@@ -2756,6 +2894,7 @@
                                 const e = document.getElementById(ids[i]);
                                 if (e) e.value = String(arr[i].d);
                             }
+                            refreshBigSmall();
                             findSegmentsFromInput();
                             return true;
                         }
@@ -2770,6 +2909,7 @@
                                         const e = document.getElementById(ids[i]);
                                         if (e) e.value = tail.charAt(i);
                                     }
+                                    refreshBigSmall();
                                     findSegmentsFromInput();
                                 } else {
                                     dataTableSeg = null; dataTableFbSegs = null; renderDataTable('latest');
@@ -3008,6 +3148,7 @@
                     })();
                     function onSegInput(el) {
                         try {
+                            bsPinned = false;   // gõ số mới → bỏ ghim, chờ kết quả mới
                             el.value = String(el.value || '').replace(/\D/g, '').slice(0, 1);
                             const ids = segInputIds();
                             const idx = ids.indexOf(el.id);
@@ -3022,8 +3163,9 @@
                             const vuaGoOCuoi = (idx === ids.length - 1);
                             if (vuaGoOCuoi && vals.length && vals.every(function (v) { return /^[0-9]$/.test(v); })) {
                                 findSegmentsFromInput();
-                                // ⬇️ COPY xuống 4 ô dưới
+                                // ⬇️ COPY xuống dãy ô dưới (số ô copy = số ô nhập)
                                 renderSegMirror(vals);
+
                                 // 🧹 XOÁ SẠCH toàn bộ số đã nhập (mọi ô, kể cả ô thừa) rồi
                                 // FOCUS LẠI Ô ĐẦU TIÊN để nhập tiếp luôn
                                 try {
@@ -3040,11 +3182,13 @@
                         });
                         dataTableSeg = null; dataTableFbSegs = null;
                         renderSegMirror([]);
+                        bsUnpin();
                         renderDataTable('latest');
                     }
                     function findSegmentsFromInput() {
                         const vals = segPrefixDigits();
                         const info = document.getElementById('segInfo');
+
                         if (!vals.length || !vals.every(function (v) { return /^[0-9]$/.test(v); })) {
                             if (info) {
                                 info.style.color = '#f87171';
@@ -3151,6 +3295,7 @@
                             }
                             body.innerHTML = html;
                             dataTableLastLen = gameArchive.length;
+                            try { bsApplyResults(cntRows.length ? cntRows : segs, n); } catch (e0) {}
                             return;
                         }
 
@@ -4069,6 +4214,7 @@
                     loadGameArchive();
                     renderGameArchiveInfo();
                     loadBoardLocal();
+                    try { refreshBigSmall(); } catch(e){}
                     renderCellHistory();         // vẽ ô lịch sử SAU khi đã nạp kho 5000 trang + bảng
                     // khôi phục "Số ô nhập" đã chọn (mặc định 4 ô)
                     try {
@@ -4122,12 +4268,31 @@
                         try { console.table(info); } catch (e) { console.log(info); }
                         return info;
                     };
+                    /* Chẩn đoán khung LỚN/NHỎ: F12 → Console → gõ  bsCheck()  */
+                    window.bsCheck = function () {
+                        let d = [];
+                        try { d = bsDigitsNewest(); } catch (e) { d = ['LỖI: ' + e.message]; }
+                        const box = document.getElementById('segBigSmall');
+                        const info = {
+                            'Kho (kỳ)': (typeof gameArchive !== 'undefined') ? gameArchive.length : '(chưa có)',
+                            'Bảng (ô có số)': (typeof boardCount !== 'undefined') ? boardCount : '?',
+                            'Lịch sử ô (5,10)': (typeof cellHistory !== 'undefined') ? cellHistory.length : '?',
+                            '5 số lấy được': d.join(' ') || '(trống)',
+                            'Khung #segBigSmall': box ? (box.innerHTML ? 'đã có nội dung' : 'TRỐNG') : 'KHÔNG THẤY',
+                            'Nguồn số': bsSrc || '(chưa có)',
+                            'Ghim theo kết quả?': bsPinned ? 'CÓ' : 'không',
+                            'Kỳ đang dùng': bsTopIssue || '(không)'
+                        };
+                        try { console.table(info); } catch (e) { console.log(info); }
+                        return info;
+                    };
                     startRealtimeSync();
                     // refresh ô cuối và đếm vàng mỗi 3s
                     setInterval(()=>{
                         try {
                             if (TOTAL>0) renderCell(TOTAL-1);
                             try { renderLastRow(); } catch(e){}
+                            try { refreshBigSmall(); } catch(e){}      // khung LON/NHO luon tuoi
                         } catch(e){}
                     }, 3000);
                     // KHÔNG reload cả trang: làm lịch sử kẹt STT cũ (vd 816) trong khi bảng đã tới 846
@@ -4159,4 +4324,4 @@
                         });
                 </script>
    
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4b7c543ba370439',t:'MTc5MjE2MTEyMQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4b81383defacd2f',t:'MTc5MjE2NDMyNw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
