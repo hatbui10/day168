@@ -2825,7 +2825,25 @@
                     let bsShuffled = false;   // đang xem ở chế độ đã xáo trộn
                     let bsCurDigits = [];     // đúng 5 số đang hiện (theo thứ tự đang hiện)
                     let bsBaseDigits = [];    // 5 số NGUYÊN GỐC (trước khi xáo)
-                    let bsPerm = null;        // hoán vị đang dùng: bsPerm[i] = vị trí gốc của ô hiện thị i
+                    let bsPerm = null;
+                    let bsAdded = null;       // null = không thêm | 1 = vừa THÊM 1 ô LỚN | 0 = vừa THÊM 1 ô NHỎ
+                    const BS_ADD_LON = '5';   // chữ số "giả" → ra 1 (LỚN)   (vì quy tắc: >=5 là LỚN)
+                    const BS_ADD_NHO = '1';   // chữ số "giả" → ra 0 (NHỎ)   (vì quy tắc: <=4 là NHỎ)        // hoán vị đang dùng: bsPerm[i] = vị trí gốc của ô hiện thị i
+                    /* ➕ TOÀN MỘT NHÓM THÌ THÊM 1 Ô NGƯỢC LẠI (trước khi random):
+                         • 5 số toàn NHỎ  (<5)  → THÊM 1 ô "5" → hiện 1 (LỚN)
+                         • 5 số toàn LỚN  (≥5)  → THÊM 1 ô "1" → hiện 0 (NHỎ)
+                       Mục đích: hoán vị random luôn có cả 0 lẫn 1 (xáo 00000 hay 11111 vẫn y nguyên, vô nghĩa). */
+                    function bsAugment(digits) {
+                        const d = (digits || []).slice();
+                        bsAdded = null;
+                        if (d.length < 2) return d;
+                        let lon = 0;
+                        for (let i = 0; i < d.length; i++) if (Number(d[i]) >= 5) lon++;
+                        if (lon === 0) { bsAdded = 1; d.push(BS_ADD_LON); return d; }         // toàn NHỎ → thêm 1
+                        if (lon === d.length) { bsAdded = 0; d.push(BS_ADD_NHO); return d; }  // toàn LỚN → thêm 0
+                        return d;
+                    }
+                    function bsCount() { return BS_LEN + (bsAdded === null ? 0 : 1); }   // 5 ô bình thường, 6 ô khi vừa thêm
                     /* 0-1 cho KỲ CAO NHẤT trong BẢNG KẾT QUẢ: lấy 5 số CUỐI của dòng đó. */
                     function bsApplyResults(segs, n) {
                         try {
@@ -2838,20 +2856,22 @@
                             bsTopIssue = segIssueId(top);
                             bsPinned = true;      // đặt TRƯớc bsRender để tiêu đề đổi theo
                             // 🔀 ĐANG XEM BẢN ĐÃ XÁO → GIỬ NGUYÊN thứ tự đang xáo (kể cả khi bảng được vẽ lại mỗi 2s)
-                            if (bsShuffled && bsPerm && bsPerm.length === tail.length) {
-                                const same = (bsBaseDigits.length === tail.length) && (bsBaseDigits.join('') === tail.join(''));
-                                bsBaseDigits = tail.slice();
+                            const aug = bsAugment(tail);   // ➕ toàn một nhóm → THÊM 1 ô ngược lại
+                            if (bsShuffled && bsPerm && bsPerm.length === aug.length) {
+                                const same = (bsBaseDigits.length === aug.length) && (bsBaseDigits.join('') === aug.join(''));
+                                bsBaseDigits = aug.slice();
                                 bsSrc = 'cuối kỳ cao nhất';
                                 if (same) return;                     // dữ liệu không đổi → khỏi vẽ lại, giữ y nguyên
-                                bsRender(bsPerm.map(function (i) { return tail[i]; }), true);
+                                bsRender(bsPerm.map(function (i) { return aug[i]; }), true);
                                 return;
                             }
                             bsShuffled = false; bsPerm = null;
                             bsSrc = 'cuối kỳ cao nhất';
-                            bsRender(tail);
+                            bsRender(aug);
+                            bsShuffle();            // 🔀 TỰ RANDOM LUÔN: có kết quả là xáo ngay, khỏi bấm nút
                         } catch (e) { try { console.warn('[BigSmall]', e); } catch (e2) {} }
                     }
-                    function bsUnpin() { bsPinned = false; bsShuffled = false; bsPerm = null; bsBaseDigits = []; bsSrc = ''; bsTopIssue = ''; refreshBigSmall(); }
+                    function bsUnpin() { bsPinned = false; bsShuffled = false; bsPerm = null; bsBaseDigits = []; bsSrc = ''; bsTopIssue = ''; bsAdded = null; refreshBigSmall(); }
                     function bsPattern(digits) {
                         const lon = [], nho = [];
                         for (let i = 0; i < digits.length; i++) {
@@ -2874,7 +2894,7 @@
                         if (!ordered) { bsBaseDigits = digits.slice(); bsPerm = null; }   // nguồn mới → quên hoán vị cũ
                         const r = digits.length ? (ordered ? bsOrdered(digits) : bsPattern(digits)) : { pat: [], lon: 0, nho: 0, tie: false };
                         let html = '';
-                        for (let i = 0; i < BS_LEN; i++) {
+                        for (let i = 0; i < bsCount(); i++) {
                             if (i < r.pat.length) {
                                 const v = r.pat[i];
                                 html += '<span class="bs-cell ' + (v ? 'lon' : 'nho') + '" title="'
@@ -2885,20 +2905,34 @@
                         }
                         box.innerHTML = html;
                         const ttl = document.getElementById('segBsTitle');
-                        if (ttl) ttl.textContent = '🔢 LỚN / NHỎ — '
-                            + (bsPinned ? ('5 số CUỐI của KỲ CAO NHẤT trong bảng')
-                                       : ('5 số ' + (bsSrc || 'mới nhất')));
+                        if (ttl) ttl.textContent = '🔢 LỚN / NHỎ — ' + bsCount() + ' ô '
+                            + (bsPinned ? 'CUỐI của KỲ CAO NHẤT trong BẢNG' : (bsSrc || 'mới nhất'))
+                            + (bsAdded === null ? ''
+                               : (bsAdded ? '   ➕ thêm 1 (vì toàn NHỎ <5)' : '   ➕ thêm 0 (vì toàn LỚN ≥5)'))
+                            + (bsShuffled ? '   🔀 đã xáo' : '');
                         if (lbl) lbl.textContent = '🔢 Lớn/Nhỏ (' + digits.length + ' số · '
                             + r.lon + ' lớn / ' + r.nho + ' nhỏ):';
+                        let addIdx = -1;                  // vị trí ô ĐƯỢC THÊM trong dãy đang hiện
+                        if (bsAdded !== null && digits.length) {
+                            if (bsPerm && bsPerm.length === digits.length) {
+                                addIdx = bsPerm.indexOf(bsPerm.length - 1);   // ô thêm luôn ở CUỐI dãy gốc
+                            } else addIdx = digits.length - 1;
+                        }
+                        const dshow = digits.map(function (v, i) { return (i === addIdx ? ('+' + v) : v); }).join(' ');
                         if (note) note.textContent = digits.length
                             ? ((bsTopIssue ? ('Kỳ ' + bsTopIssue + '  ·  ') : '')
-                               + '5 số ' + (bsSrc || 'mới nhất') + ': ' + digits.join(' ') + '  →  '
-                               + (r.lon === 0 ? 'toàn NHỎ (0-4)'
-                                  : (r.nho === 0 ? 'toàn LỚN (5-9)'
-                                     : (r.tie ? 'số lượng bằng nhau → giữ nguyên thứ tự'
-                                        : (r.lon < r.nho ? 'Lớn ít hơn → 1 đứng trước'
-                                                        : 'Nhỏ ít hơn → 0 đứng trước'))))
-                               + (bsShuffled ? '  ·  🔀 đã xáo trộn' : ''))
+                               + bsCount() + ' số ' + (bsSrc || 'mới nhất') + ': ' + dshow + '  →  '
+                               + (bsShuffled
+                                  ? (r.lon + ' LỚN / ' + r.nho + ' NHỎ')
+                                  : (r.lon === 0 ? 'toàn NHỎ (0-4)'
+                                     : (r.nho === 0 ? 'toàn LỚN (5-9)'
+                                        : (r.tie ? 'số lượng bằng nhau → giữ nguyên thứ tự'
+                                           : (r.lon < r.nho ? 'Lớn ít hơn → 1 đứng trước'
+                                                           : 'Nhỏ ít hơn → 0 đứng trước')))))
+                               + (bsAdded === null ? ''
+                                  : ('  ·  ➕ THÊM 1 ô ' + (bsAdded ? '1 (LỚN)' : '0 (NHỎ)')
+                                     + ' vì ' + BS_LEN + ' số gốc toàn ' + (bsAdded ? 'NHỎ (<5)' : 'LỚN (≥5)')))
+                               + (bsShuffled ? '  ·  🔀 đã xáo' : ''))
                             : '· chưa có số trong kho ·';
                     }
                     function bsOrdered(digits) {   // 1/0 theo ĐÚNG thứ tự đang có (dùng sau khi xáo)
@@ -2960,7 +2994,10 @@
                     function refreshBigSmall() {
                         if (bsPinned) return;               // đang hiện theo bảng kết quả → đợi yêu cầu mới
                         bsShuffled = false; bsPerm = null;
-                        try { bsRender(bsDigitsNewest()); }
+                        try {
+                            bsRender(bsAugment(bsDigitsNewest()));
+                            bsShuffle();            // 🔀 TỰ RANDOM LUÔN
+                        }
                         catch (e) { try { console.warn('[BigSmall]', e); } catch (e2) {} }
                     }
                     function renderSegInputs(keepValues) {
@@ -4398,6 +4435,10 @@
                         try { d = bsDigitsNewest(); } catch (e) { d = ['LỖI: ' + e.message]; }
                         const box = document.getElementById('segBigSmall');
                         const info = {
+                            'Số ô đang hiện': bsCount() + ' ô (5 bình thường, 6 khi toàn một nhóm)',
+                            'Đã thêm ô?': (bsAdded === null ? 'không'
+                                : ('CÓ · thêm ' + bsAdded + (bsAdded ? ' (LỚN, vì 5 số toàn NHỎ <5)' : ' (NHỎ, vì 5 số toàn LỚN ≥5)'))),
+                            'Đang hiện (0/1)': bsCurDigits.join(' ') || '(trống)',
                             'Kho (kỳ)': (typeof gameArchive !== 'undefined') ? gameArchive.length : '(chưa có)',
                             'Bảng (ô có số)': (typeof boardCount !== 'undefined') ? boardCount : '?',
                             'Lịch sử ô (5,10)': (typeof cellHistory !== 'undefined') ? cellHistory.length : '?',
@@ -4449,4 +4490,4 @@
                         });
                 </script>
    
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4c4fbbeaeb01c66',t:'MTc5MjI5OTY2OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4c51ab98e4885f5',t:'MTc5MjMwMDkzNw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
