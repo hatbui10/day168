@@ -529,6 +529,28 @@
                 box-shadow: 0 0 0 #92400e, 0 2px 6px rgba(251,191,36,.35);
             }
             #segExportTxtBtn.empty { filter: grayscale(.55); opacity:.65; }
+            /* ===== 📊 Khung so sánh LỚN / NHỎ trong N trang gần nhất ===== */
+            #pgStatBox { background:#0b1220; border:1px solid #4c1d95; border-radius:8px;
+                         padding:6px 8px; margin-top:7px; }
+            .pg-head { font-size:11px; color:#cbd5e1; font-weight:bold; margin-bottom:6px; line-height:1.45; }
+            .pg-row { display:flex; align-items:center; gap:6px; margin-bottom:4px; font-size:11px; }
+            .pg-lab { width:68px; flex:none; font-weight:bold; }
+            .pg-lab.lon { color:#fbbf24; }
+            .pg-lab.nho { color:#7dd3fc; }
+            .pg-bar { flex:1 1 auto; height:13px; min-width:60px; background:#111827;
+                      border:1px solid #1f2937; border-radius:7px; overflow:hidden;
+                      box-shadow: inset 0 1px 3px rgba(0,0,0,.6); }
+            .pg-bar > i { display:block; height:100%; border-radius:7px; transition: width .25s ease; }
+            .pg-bar.lon > i { background:linear-gradient(90deg,#fde68a,#fbbf24 40%,#f97316 75%,#dc2626); }
+            .pg-bar.nho > i { background:linear-gradient(90deg,#e0f2fe,#7dd3fc 40%,#38bdf8 75%,#1d4ed8); }
+            .pg-num { width:46px; flex:none; text-align:right; font-family:monospace;
+                      font-weight:bold; color:#e2e8f0; }
+            .pg-pct { width:44px; flex:none; text-align:right; font-family:monospace; color:#94a3b8; }
+            .pg-ver { margin-top:6px; font-size:11.5px; font-weight:bold; text-align:center;
+                      padding:4px 6px; border-radius:6px; letter-spacing:.2px; }
+            .pg-ver.lon { background:linear-gradient(180deg,#4a1942,#3b0764); color:#fde68a; border:1px solid #d946ef; }
+            .pg-ver.nho { background:linear-gradient(180deg,#0c4a6e,#082f49); color:#bae6fd; border:1px solid #38bdf8; }
+            .pg-ver.tie { background:#1f2937; color:#cbd5e1; border:1px solid #475569; }
             #segBsWrap .bs-title { font-size:11px; color:#cbd5e1; font-weight:bold; margin-bottom:6px;
                                    letter-spacing:.3px; }
             #segBigSmall { gap:8px; }
@@ -654,6 +676,35 @@
                         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:7px">
                             <span id="segMirrorLabel" style="font-size:11px;color:#94a3b8;font-weight:bold">⬇️ Copy xuống 4 ô:</span>
                             <span id="segMirror" style="display:flex;gap:6px"></span>
+                        </div>
+                        <!-- 📊 SO SÁNH LỚN / NHỎ TRONG N TRANG GẦN NHẤT (1 trang = 10 kỳ) -->
+                        <div id="pgStatBox">
+                            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:5px">
+                                <label style="font-size:11px;color:#e9d5ff;font-weight:bold">📄 Số trang:</label>
+                                <span class="dd-wrap">
+                                    <button type="button" class="dd-btn green" id="pgLenBtn">10 trang ▾</button>
+                                    <div class="dd-list" id="pgLenList" style="display:none">
+                                        <div class="dd-item" data-val="5">5 trang</div>
+                                        <div class="dd-item" data-val="10">10 trang</div>
+                                        <div class="dd-item" data-val="20">20 trang</div>
+                                        <div class="dd-item" data-val="50">50 trang</div>
+                                        <div class="dd-item" data-val="100">100 trang</div>
+                                        <div class="dd-item" data-val="200">200 trang</div>
+                                        <div class="dd-item" data-val="500">500 trang</div>
+                                    </div>
+                                </span>
+                                <select id="pgLen" class="dd-hidden-sel" onchange="onPgLenChange()">
+                                    <option value="5">5 trang</option>
+                                    <option value="10" selected>10 trang</option>
+                                    <option value="20">20 trang</option>
+                                    <option value="50">50 trang</option>
+                                    <option value="100">100 trang</option>
+                                    <option value="200">200 trang</option>
+                                    <option value="500">500 trang</option>
+                                </select>
+                                <span id="pgLenInfo" style="font-size:10px;color:#94a3b8"></span>
+                            </div>
+                            <div id="pgStat"></div>
                         </div>
                         <div id="segBsWrap">
                             <div class="bs-title" id="segBsTitle">🔢 LỚN / NHỎ — 5 số CUỐI BẢNG (mới nhất)</div>
@@ -2077,6 +2128,7 @@
                             + ' · đã tải tới trang ' + (Number(pg.lastPage) || 0) + '/' + AUTO_LOAD_PAGES
                             + (archiveSaveFailed ? ('  ⚠️ ' + archiveSaveFailed) : '');
                         try { if (typeof refreshExportTxtBtn === 'function') refreshExportTxtBtn(); } catch (e) {}
+                        try { if (typeof renderPageStat === 'function') renderPageStat(true); } catch (e) {}
                     }
                     
                     /* ================= TỰ ĐỘNG LƯU KHO 5000 TRANG LÊN FIREBASE =================
@@ -3586,6 +3638,74 @@
                             ? ('Xuất ' + n.toLocaleString('vi-VN') + ' kỳ' + (cloud ? ' (trên Firebase — sẽ tải về rồi mới xuất)' : '') + ' ra file .txt')
                             : 'Kho đang trống — bấm "⬇️ Tải 100 trang" (cần token API) rồi xuất lại.';
                     }
+                    /* ===== 📊 SO SÁNH LỚN / NHỎ TRONG N TRANG GẦN NHẤT (1 trang = 10 kỳ) ===== */
+                    const PG_PER_PAGE = 10;        // 1 trang API = 10 kỳ
+                    let pgLastSig = '';
+                    function pgPages() {
+                        const el = document.getElementById('pgLen');
+                        const n = parseInt(el && el.value, 10);
+                        return (n > 0) ? n : 10;
+                    }
+                    function pgDigitsNewest(want) {
+                        const out = [];
+                        for (let i = 0; i < gameArchive.length && out.length < want; i++) {
+                            const e = gameArchive[i];
+                            if (e && /^[0-9]$/.test(String(e.d))) out.push({ i: e.i, d: Number(e.d) });
+                        }
+                        return out;
+                    }
+                    function renderPageStat(force) {
+                        const box = document.getElementById('pgStat');
+                        if (!box) return;
+                        const pages = pgPages();
+                        const want = pages * PG_PER_PAGE;
+                        const info = document.getElementById('pgLenInfo');
+                        if (info) info.textContent = '= ' + want.toLocaleString('vi-VN')
+                            + ' kỳ gần nhất (1 trang = ' + PG_PER_PAGE + ' kỳ)';
+                        const sig = pages + '|' + gameArchive.length;
+                        if (!force && sig === pgLastSig) return;      // không đổi -> khỏi vẽ lại
+                        pgLastSig = sig;
+                        const arr = pgDigitsNewest(want);
+                        if (!arr.length) {
+                            box.innerHTML = '<div class="pg-head">📊 ' + pages
+                                + ' trang gần nhất — chưa có dữ liệu</div>'
+                                + '<div style="font-size:11px;color:#f87171">Kho đang trống — bấm "⬇️ Tải 100 trang" (cần token API) rồi xem lại.</div>';
+                            return;
+                        }
+                        let lon = 0, nho = 0;
+                        for (let i = 0; i < arr.length; i++) { if (arr[i].d >= 5) lon++; else nho++; }
+                        const tot = lon + nho;
+                        const pLon = tot ? (lon * 100 / tot) : 0;
+                        const pNho = tot ? (nho * 100 / tot) : 0;
+                        const newest = arr[0].i, oldest = arr[arr.length - 1].i;
+                        const diff = Math.abs(lon - nho);
+                        const win = lon > nho ? 'lon' : (nho > lon ? 'nho' : 'tie');
+                        const winName = (win === 'lon') ? 'LỚN (5-9)' : (win === 'nho' ? 'NHỎ (0-4)' : 'HAI BÊN');
+                        const verTxt = (win === 'tie')
+                            ? ('👉 HAI BÊN BẰNG NHAU (' + lon.toLocaleString('vi-VN') + ' / ' + nho.toLocaleString('vi-VN') + ')')
+                            : ('👉 ' + winName + ' NHIỀU HƠN ' + diff.toLocaleString('vi-VN') + ' số');
+                        const thieu = (arr.length < want)
+                            ? (' · kho mới có ' + tot.toLocaleString('vi-VN') + '/' + want.toLocaleString('vi-VN') + ' kỳ')
+                            : '';
+                        box.innerHTML =
+                              '<div class="pg-head">📊 ' + pages + ' trang gần nhất · '
+                            + tot.toLocaleString('vi-VN') + ' kỳ' + thieu
+                            + '<br>kỳ ' + newest + ' → ' + oldest + '</div>'
+                            + '<div class="pg-row"><span class="pg-lab lon">LỚN (5-9)</span>'
+                            + '<span class="pg-bar lon"><i style="width:' + pLon.toFixed(1) + '%"></i></span>'
+                            + '<span class="pg-num">' + lon.toLocaleString('vi-VN') + '</span>'
+                            + '<span class="pg-pct">' + pLon.toFixed(1) + '%</span></div>'
+                            + '<div class="pg-row"><span class="pg-lab nho">NHỎ (0-4)</span>'
+                            + '<span class="pg-bar nho"><i style="width:' + pNho.toFixed(1) + '%"></i></span>'
+                            + '<span class="pg-num">' + nho.toLocaleString('vi-VN') + '</span>'
+                            + '<span class="pg-pct">' + pNho.toFixed(1) + '%</span></div>'
+                            + '<div class="pg-ver ' + win + '">' + verTxt + '</div>';
+                    }
+                    function onPgLenChange() {
+                        try { localStorage.setItem('vn168_pgLen', String(pgPages())); } catch (e) {}
+                        try { ddSync('pgLen'); } catch (e) {}
+                        try { renderPageStat(true); } catch (e) {}
+                    }
                     function exportDataTable() {
                         let text = '';
                         const stamp = new Date().toLocaleString('vi-VN');
@@ -3611,6 +3731,7 @@
                     setInterval(function () {
                         try {
                                 if (typeof refreshExportTxtBtn === 'function') refreshExportTxtBtn();
+                            if (typeof renderPageStat === 'function') renderPageStat();
                             if (gameArchive.length !== dataTableLastLen) renderDataTable(dataTableMode);
                         } catch (e) {}
                     }, 2000);
@@ -4395,6 +4516,12 @@
                         ddSync('segSort');
                     } catch(e){}
                     try { ddInit('segLen'); ddInit('segSort'); } catch(e){}
+                    try { ddInit('pgLen'); } catch(e){}
+                    try {
+                        const pgSaved = parseInt(localStorage.getItem('vn168_pgLen'), 10);
+                        if (pgSaved > 0) { const selP = document.getElementById('pgLen'); if (selP) selP.value = String(pgSaved); }
+                        ddSync('pgLen'); renderPageStat(true);
+                    } catch(e){}
                     try { renderDataTable('latest'); } catch(e){}
                     mainInput.focus();
                     // ✅ MỞ TRANG LÀ FOCUS LUÔN Ô NHẬP ĐẦU TIÊN để gõ tiếp được ngay
@@ -4490,4 +4617,4 @@
                         });
                 </script>
    
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4c51ab98e4885f5',t:'MTc5MjMwMDkzNw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4c52dbc5f54848d',t:'MTc5MjMwMTcxNQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
