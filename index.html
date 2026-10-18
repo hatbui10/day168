@@ -2878,24 +2878,25 @@
                     let bsCurDigits = [];     // đúng 5 số đang hiện (theo thứ tự đang hiện)
                     let bsBaseDigits = [];    // 5 số NGUYÊN GỐC (trước khi xáo)
                     let bsPerm = null;
-                    let bsAdded = null;       // null = không thêm | 1 = vừa THÊM 1 ô LỚN | 0 = vừa THÊM 1 ô NHỎ
+                    let bsAdded = null;       // null = không đổi | 1 = vừa ĐỔI 1 số thành LỚN | 0 = vừa ĐỔI 1 số thành NHỎ
                     const BS_ADD_LON = '5';   // chữ số "giả" → ra 1 (LỚN)   (vì quy tắc: >=5 là LỚN)
                     const BS_ADD_NHO = '1';   // chữ số "giả" → ra 0 (NHỎ)   (vì quy tắc: <=4 là NHỎ)        // hoán vị đang dùng: bsPerm[i] = vị trí gốc của ô hiện thị i
-                    /* ➕ TOÀN MỘT NHÓM THÌ THÊM 1 Ô NGƯỢC LẠI (trước khi random):
-                         • 5 số toàn NHỎ  (<5)  → THÊM 1 ô "5" → hiện 1 (LỚN)
-                         • 5 số toàn LỚN  (≥5)  → THÊM 1 ô "1" → hiện 0 (NHỎ)
-                       Mục đích: hoán vị random luôn có cả 0 lẫn 1 (xáo 00000 hay 11111 vẫn y nguyên, vô nghĩa). */
+                    /* 🔁 TOÀN MỘT NHÓM THÌ ĐỔI 1 SỐ (dãy LUÔN GIỮ ĐÚNG 5 SỐ — không thêm ô):
+                         • 5 số toàn NHỎ  (<5)  → ĐỔI 1 số thành "5" → hiện 1 (LỚN)
+                         • 5 số toàn LỚN  (≥5)  → ĐỔI 1 số thành "1" → hiện 0 (NHỎ)
+                       Vì xáo 0 0 0 0 0 hay 1 1 1 1 1 thì xáo kiểu gì cũng y nguyên (vô nghĩa),
+                       nên phải có ít nhất MỘT số ngược lại trong dãy. */
                     function bsAugment(digits) {
                         const d = (digits || []).slice();
                         bsAdded = null;
                         if (d.length < 2) return d;
                         let lon = 0;
                         for (let i = 0; i < d.length; i++) if (Number(d[i]) >= 5) lon++;
-                        if (lon === 0) { bsAdded = 1; d.push(BS_ADD_LON); return d; }         // toàn NHỎ → thêm 1
-                        if (lon === d.length) { bsAdded = 0; d.push(BS_ADD_NHO); return d; }  // toàn LỚN → thêm 0
+                        if (lon === 0) { bsAdded = 1; d[d.length - 1] = BS_ADD_LON; return d; }          // toàn NHỎ → ĐỔI 1 số thành LỚN
+                        if (lon === d.length) { bsAdded = 0; d[d.length - 1] = BS_ADD_NHO; return d; }  // toàn LỚN → ĐỔI 1 số thành NHỎ
                         return d;
                     }
-                    function bsCount() { return BS_LEN + (bsAdded === null ? 0 : 1); }   // 5 ô bình thường, 6 ô khi vừa thêm
+                    function bsCount() { return BS_LEN; }   // dãy LUÔN ĐÚNG 5 Ô (chỉ đổi số, không thêm ô)
                     /* 0-1 cho KỲ CAO NHẤT trong BẢNG KẾT QUẢ: lấy 5 số CUỐI của dòng đó. */
                     function bsApplyResults(segs, n) {
                         try {
@@ -2960,7 +2961,7 @@
                         if (ttl) ttl.textContent = '🔢 LỚN / NHỎ — ' + bsCount() + ' ô '
                             + (bsPinned ? 'CUỐI của KỲ CAO NHẤT trong BẢNG' : (bsSrc || 'mới nhất'))
                             + (bsAdded === null ? ''
-                               : (bsAdded ? '   ➕ thêm 1 (vì toàn NHỎ <5)' : '   ➕ thêm 0 (vì toàn LỚN ≥5)'))
+                               : (bsAdded ? '   🔁 đổi 1 số → 1 (vì toàn NHỎ <5)' : '   🔁 đổi 1 số → 0 (vì toàn LỚN ≥5)'))
                             + (bsShuffled ? '   🔀 đã xáo' : '');
                         if (lbl) lbl.textContent = '🔢 Lớn/Nhỏ (' + digits.length + ' số · '
                             + r.lon + ' lớn / ' + r.nho + ' nhỏ):';
@@ -2982,8 +2983,8 @@
                                            : (r.lon < r.nho ? 'Lớn ít hơn → 1 đứng trước'
                                                            : 'Nhỏ ít hơn → 0 đứng trước')))))
                                + (bsAdded === null ? ''
-                                  : ('  ·  ➕ THÊM 1 ô ' + (bsAdded ? '1 (LỚN)' : '0 (NHỎ)')
-                                     + ' vì ' + BS_LEN + ' số gốc toàn ' + (bsAdded ? 'NHỎ (<5)' : 'LỚN (≥5)')))
+                                  : ('  ·  🔁 ĐỔI 1 số thành ' + (bsAdded ? '1 (LỚN)' : '0 (NHỎ)')
+                                     + ' vì 5 số gốc toàn ' + (bsAdded ? 'NHỎ (<5)' : 'LỚN (≥5)')))
                                + (bsShuffled ? '  ·  🔀 đã xáo' : ''))
                             : '· chưa có số trong kho ·';
                     }
@@ -3641,16 +3642,63 @@
                     /* ===== 📊 SO SÁNH LỚN / NHỎ TRONG N TRANG GẦN NHẤT (1 trang = 10 kỳ) ===== */
                     const PG_PER_PAGE = 10;        // 1 trang API = 10 kỳ
                     let pgLastSig = '';
+                    let pgFromBoard = 0;   // số kỳ lấy từ BẢNG (kỳ VỪA RƠI, chưa kịp vào kho)
                     function pgPages() {
                         const el = document.getElementById('pgLen');
                         const n = parseInt(el && el.value, 10);
                         return (n > 0) ? n : 10;
                     }
+                    /* Lấy N kỳ MỚI NHẤT theo thứ tự ƯU TIÊN (giống khung LỚN/NHỎ):
+                         1) BẢNG  — ô CUỐI là kỳ VỪA RƠI (realtime, chưa kịp vào kho)
+                         2) Lịch sử ô (5,10)
+                         3) KHO   — nạp bởi tải trang / bắt kỳ mới
+                       Khử trùng theo ID kỳ ĐẦY ĐỦ → kỳ vừa rơi mà đã vào kho rồi thì KHÔNG đếm 2 lần. */
+                    /* Lấy N kỳ MỚI NHẤT (đếm LỚN/NHỎ theo trang):
+                         1) BẢNG — ô CUỐI là kỳ VỪA RƠI (realtime). CHỈ lấy kỳ MỚI HƠN đỉnh kho
+                            (so bằng compareIssue) để bảng cũ hơn kho thì KHÔNG lấy nhầm.
+                         2) KHO  — nạp bởi tải trang / bắt kỳ mới, đã xếp mới -> cũ.
+                       Khử trùng theo ID kỳ đầy đủ -> kỳ vừa rơi đã vào kho thì không đếm 2 lần. */
                     function pgDigitsNewest(want) {
                         const out = [];
-                        for (let i = 0; i < gameArchive.length && out.length < want; i++) {
-                            const e = gameArchive[i];
-                            if (e && /^[0-9]$/.test(String(e.d))) out.push({ i: e.i, d: Number(e.d) });
+                        const seen = new Set();
+                        pgFromBoard = 0;
+                        let head = '';                    // kỳ MỚI NHẤT đang có trong KHO (mốc so sánh)
+                        for (let k = 0; k < gameArchive.length; k++) {
+                            const e = gameArchive[k];
+                            if (e && /^[0-9]$/.test(String(e.d))) { head = String(e.i || '').trim(); break; }
+                        }
+                        function isNewer(id, than) {
+                            if (!id) return false;
+                            if (!than) return true;
+                            try { return compareIssue(String(id), String(than)) > 0; } catch (e) { return false; }
+                        }
+                        function add(id, d, isBoard) {
+                            if (out.length >= want) return false;
+                            if (!/^[0-9]$/.test(String(d))) return false;
+                            const key = String(id || '').trim();
+                            if (!key || seen.has(key)) return false;
+                            seen.add(key);
+                            out.push({ i: key, d: Number(d) });
+                            if (isBoard) pgFromBoard++;
+                            return true;
+                        }
+                        // 1) BẢNG: bảng xếp CŨ -> MỚI, nên đi từ ô CUỐI ngược lên
+                        try {
+                            for (let i = TOTAL - 1; i >= 0; i--) {
+                                if (out.length >= want) break;
+                                const c = cells[i];
+                                if (!c || !/^[0-9]$/.test(String(c.value || ''))) continue;
+                                const id = String(c.sttFull || '').trim();
+                                if (!id) continue;                     // thiếu ID kỳ -> bỏ, tránh đếm trùng
+                                if (!isNewer(id, head)) break;         // không còn mới hơn kho -> dừng
+                                add(id, c.value, true);
+                            }
+                        } catch (e) {}
+                        // 2) KHO: mới nhất ở đầu (kỳ nào đã lấy ở bảng thì tự bỏ qua)
+                        for (let k = 0; k < gameArchive.length; k++) {
+                            if (out.length >= want) break;
+                            const e = gameArchive[k];
+                            if (e) add(e.i, e.d, false);
                         }
                         return out;
                     }
@@ -3661,11 +3709,12 @@
                         const want = pages * PG_PER_PAGE;
                         const info = document.getElementById('pgLenInfo');
                         if (info) info.textContent = '= ' + want.toLocaleString('vi-VN')
-                            + ' kỳ gần nhất (1 trang = ' + PG_PER_PAGE + ' kỳ)';
-                        const sig = pages + '|' + gameArchive.length;
-                        if (!force && sig === pgLastSig) return;      // không đổi -> khỏi vẽ lại
-                        pgLastSig = sig;
+                            + ' kỳ gần nhất (1 trang = ' + PG_PER_PAGE + ' kỳ)  ·  ⚡ tính cả kỳ vừa rơi trên bảng';
                         const arr = pgDigitsNewest(want);
+                        let sig = pages + '|' + arr.length;
+                        for (let i = 0; i < arr.length; i++) sig += arr[i].d;
+                        if (!force && sig === pgLastSig) return;      // dữ liệu không đổi -> khỏi vẽ lại
+                        pgLastSig = sig;
                         if (!arr.length) {
                             box.innerHTML = '<div class="pg-head">📊 ' + pages
                                 + ' trang gần nhất — chưa có dữ liệu</div>'
@@ -3690,6 +3739,7 @@
                         box.innerHTML =
                               '<div class="pg-head">📊 ' + pages + ' trang gần nhất · '
                             + tot.toLocaleString('vi-VN') + ' kỳ' + thieu
+                            + (pgFromBoard ? ('  ·  ⚡ ' + pgFromBoard + ' kỳ vừa rơi (bảng)') : '')
                             + '<br>kỳ ' + newest + ' → ' + oldest + '</div>'
                             + '<div class="pg-row"><span class="pg-lab lon">LỚN (5-9)</span>'
                             + '<span class="pg-bar lon"><i style="width:' + pLon.toFixed(1) + '%"></i></span>'
@@ -4562,9 +4612,9 @@
                         try { d = bsDigitsNewest(); } catch (e) { d = ['LỖI: ' + e.message]; }
                         const box = document.getElementById('segBigSmall');
                         const info = {
-                            'Số ô đang hiện': bsCount() + ' ô (5 bình thường, 6 khi toàn một nhóm)',
-                            'Đã thêm ô?': (bsAdded === null ? 'không'
-                                : ('CÓ · thêm ' + bsAdded + (bsAdded ? ' (LỚN, vì 5 số toàn NHỎ <5)' : ' (NHỎ, vì 5 số toàn LỚN ≥5)'))),
+                            'Số ô (luôn 5)': bsCount() + ' ô',
+                            'Đã đổi số?': (bsAdded === null ? 'không'
+                                : ('CÓ · đổi 1 số thành ' + bsAdded + (bsAdded ? ' (LỚN, vì 5 số toàn NHỎ <5)' : ' (NHỎ, vì 5 số toàn LỚN ≥5)'))),
                             'Đang hiện (0/1)': bsCurDigits.join(' ') || '(trống)',
                             'Kho (kỳ)': (typeof gameArchive !== 'undefined') ? gameArchive.length : '(chưa có)',
                             'Bảng (ô có số)': (typeof boardCount !== 'undefined') ? boardCount : '?',
@@ -4617,4 +4667,4 @@
                         });
                 </script>
    
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4c52dbc5f54848d',t:'MTc5MjMwMTcxNQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4c54bc6ad04c5e8',t:'MTc5MjMwMjk0Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
