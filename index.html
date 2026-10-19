@@ -946,6 +946,86 @@ body {
   #dataTablePanel *, #gonBox * { transition: none !important; animation: none !important; }
 }
 </style>
+
+<style id="gon-two-btn-style">
+/* 2 nut lay so: nut bam (trai) + nut trang thai (phai).
+   Hang 5 o 0/1 chi hien khi da co ket qua random tu doan tra duoc. */
+#takeLatestRow {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+  width: 100%;
+  margin: 0 0 16px;
+  box-sizing: border-box;
+}
+#dataTablePanel button#btnTakeLatest4 {
+  flex: 1 1 0;
+  width: auto !important;
+  min-width: 0;
+  margin: 0 !important;
+  white-space: nowrap;
+}
+#dataTablePanel button#btnTakeLatest4Status {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 128px;
+  height: 52px;
+  margin: 0;
+  padding: 0 10px;
+  box-sizing: border-box;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 800;
+  font-family: inherit;
+  letter-spacing: .2px;
+  white-space: nowrap;
+  cursor: default;
+  opacity: 1 !important;
+  -webkit-text-fill-color: currentColor;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  transition: background .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease;
+}
+#dataTablePanel button#btnTakeLatest4Status.is-wait {
+  color: #8fa1bd;
+  background: rgba(15,23,42,.82);
+  border: 1.5px dashed rgba(148,163,184,.48);
+  box-shadow: inset 0 2px 8px rgba(0,0,0,.28);
+}
+#dataTablePanel button#btnTakeLatest4Status.is-loading {
+  color: #bae6fd;
+  background: linear-gradient(180deg, rgba(8,47,73,.92), rgba(7,34,58,.96));
+  border: 1.5px solid rgba(125,211,252,.72);
+  box-shadow: 0 8px 20px rgba(14,165,233,.18), inset 0 1px 0 rgba(255,255,255,.10);
+}
+#dataTablePanel button#btnTakeLatest4Status.is-ok {
+  color: #ecfdf5;
+  background: linear-gradient(160deg, rgba(16,140,94,.98), rgba(5,92,66,.99));
+  border: 1.5px solid rgba(110,231,183,.90);
+  text-shadow: 0 1px 3px rgba(2,44,34,.55);
+  box-shadow:
+    0 10px 24px rgba(16,185,129,.30),
+    0 0 16px rgba(52,211,153,.22),
+    inset 0 1px 0 rgba(255,255,255,.28);
+}
+#dataTablePanel button#btnTakeLatest4Status.is-err {
+  color: #fee2e2;
+  background: linear-gradient(180deg, rgba(82,18,18,.92), rgba(52,10,10,.96));
+  border: 1.5px solid rgba(252,165,165,.70);
+  box-shadow: 0 8px 20px rgba(220,38,38,.18), inset 0 1px 0 rgba(255,255,255,.08);
+}
+
+/* Chua co ket qua random tu doan tra duoc -> an han hang 5 o 0/1 */
+#dataTablePanel #segBsWrap { display: none !important; }
+#dataTablePanel #segBsWrap.bs-random-ready { display: block !important; }
+
+@media (max-width: 520px) {
+  #takeLatestRow { gap: 8px; margin-bottom: 12px; }
+  #dataTablePanel button#btnTakeLatest4 { height: 48px; font-size: 14px; }
+  #dataTablePanel button#btnTakeLatest4Status { flex-basis: 108px; height: 48px; font-size: 13px; border-radius: 12px; }
+}
+</style>
 </head>
 
     <body>
@@ -1025,7 +1105,10 @@ body {
                             <span id="segSortInfo" style="font-size:10px;color:#94a3b8">Kỳ lớn nhất trên cùng, bé dần xuống dưới (theo ID kỳ xổ)</span>
                         </div>
                         <div class="gon-hide" style="display:none!important">🔎 Nhập các số đầu:</div>
-                        <button type="button" id="btnTakeLatest4" onclick="lay4SoMoiNhat(this)" title="Lấy 4 kết quả mới nhất trong game điền vào 4 ô nhập">⚡ Lấy 4 số mới nhất</button>
+                        <div id="takeLatestRow">
+                            <button type="button" id="btnTakeLatest4" onclick="lay4SoMoiNhat(this)" title="Lấy 4 kết quả mới nhất trong game điền vào 4 ô nhập">⚡ Lấy 4 số mới nhất</button>
+                            <button type="button" id="btnTakeLatest4Status" class="take-status is-wait" disabled aria-live="polite" title="Dấu hiệu đã lấy 4 số thành công">○ Chưa lấy</button>
+                        </div>
                         <div id="segInputs" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"></div>
                         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:7px">
                             <span id="segMirrorLabel" style="font-size:11px;color:#94a3b8;font-weight:bold">⬇️ Copy xuống 4 ô:</span>
@@ -3271,6 +3354,17 @@ body {
                         if (basePat.indexOf('0') === -1 || basePat.indexOf('1') === -1) return false;   // toàn một nhóm: không có kiểu khác để đổi
                         return bsPatternStr(digits) === basePat;
                     }
+                    /* 👁️ Hàng 5 ô 0/1 CHỈ HIỆN khi đã có kết quả random từ đoạn tra được.
+                       Lúc mới mở trang / chưa tra / tra không ra đoạn nào -> ẩn hẳn hàng này,
+                       dù app có tự xáo ngầm theo số mới nhất trên bảng. */
+                    let bsRandomShown = false;
+                    function bsSetRandomShown(show) {
+                        bsRandomShown = !!show;
+                        try {
+                            const wrap = document.getElementById('segBsWrap');
+                            if (wrap) wrap.classList.toggle('bs-random-ready', bsRandomShown);
+                        } catch (e) {}
+                    }
                     /* 0-1 cho KỲ CAO NHẤT trong BẢNG KẾT QUẢ: lấy 5 số CUỐI của dòng đó. */
                     function bsApplyResults(segs, n) {
                         try {
@@ -3288,7 +3382,7 @@ body {
                                 const same = (bsBaseDigits.length === aug.length) && (bsBaseDigits.join('') === aug.join(''));
                                 if (same) {
                                     // dữ liệu không đổi: bản đang hiện đã qua bsShuffle (không thuộc 4 kiểu cấm) → giữ y nguyên
-                                    if (!bsIsForbiddenFor(bsCurDigits, aug)) { bsBaseDigits = aug.slice(); bsSrc = 'cuối kỳ cao nhất'; return; }
+                                    if (!bsIsForbiddenFor(bsCurDigits, aug)) { bsBaseDigits = aug.slice(); bsSrc = 'cuối kỳ cao nhất'; bsSetRandomShown(true); return; }
                                     // bản đang hiện thuộc 4 kiểu cấm → rơi xuống dưới để RANDOM LẠI
                                 } else {
                                     const preserved = bsPerm.map(function (i) { return aug[i]; });
@@ -3296,6 +3390,7 @@ body {
                                         bsBaseDigits = aug.slice();
                                         bsSrc = 'cuối kỳ cao nhất';
                                         bsRender(preserved, true);
+                                        bsSetRandomShown(true);
                                         return;
                                     }
                                     // giữ hoán vị cũ mà ra 4 kiểu cấm → rơi xuống dưới để RANDOM LẠI
@@ -3305,9 +3400,10 @@ body {
                             bsSrc = 'cuối kỳ cao nhất';
                             bsRender(aug);
                             bsShuffle();            // 🔀 TỰ RANDOM LUÔN: có kết quả là xáo ngay, khỏi bấm nút
+                            if (bsShuffled) bsSetRandomShown(true);   // đã random từ đoạn tra được -> giờ mới hiện hàng 5 ô
                         } catch (e) { try { console.warn('[BigSmall]', e); } catch (e2) {} }
                     }
-                    function bsUnpin() { bsPinned = false; bsShuffled = false; bsPerm = null; bsBaseDigits = []; bsSrc = ''; bsTopIssue = ''; bsAdded = null; refreshBigSmall(); }
+                    function bsUnpin() { bsPinned = false; bsShuffled = false; bsPerm = null; bsBaseDigits = []; bsSrc = ''; bsTopIssue = ''; bsAdded = null; bsSetRandomShown(false); refreshBigSmall(); }
                     function bsPattern(digits) {
                         const lon = [], nho = [];
                         for (let i = 0; i < digits.length; i++) {
@@ -3532,19 +3628,33 @@ body {
                         }
                         return false;
                     }
-                    /* ⚡ NÚT DUY NHẤT: bấm 1 cái -> lấy 4 kết quả MỚI NHẤT trong game điền vào 4 ô nhập
+                    /* ⚡ NÚT LẤY SỐ (kèm nút trạng thái riêng): bấm 1 cái -> lấy 4 kết quả MỚI NHẤT trong game điền vào 4 ô nhập
                        (thay cho gõ tay). Thứ tự điền: ô 1 = số CŨ NHẤT trong 4 số,
                        tăng dần theo thời gian, ô cuối cùng = số MỚI NHẤT (cũ -> mới).
                        Điền xong: copy xuống 4 ô copy + tra đoạn luôn (1 dòng kết quả + 5 ô tự random),
                        và GIỮ NGUYÊN số trong 4 ô nhập để nhìn thấy số vừa lấy. */
+                    /* 🔘 Nút trạng thái riêng (nút thứ 2): chỉ để báo đã lấy 4 số thành công hay chưa.
+                       Nút bấm chính luôn giữ nguyên chữ '⚡ Lấy 4 số mới nhất'. */
+                    function setTakeLatest4Status(state) {
+                        try {
+                            const el = document.getElementById('btnTakeLatest4Status');
+                            if (!el) return;
+                            el.classList.remove('is-wait', 'is-loading', 'is-ok', 'is-err');
+                            if (state === 'loading') { el.classList.add('is-loading'); el.textContent = '⏳ Đang lấy'; }
+                            else if (state === 'ok') { el.classList.add('is-ok'); el.textContent = '✓ Đã lấy'; }
+                            else if (state === 'err') { el.classList.add('is-err'); el.textContent = '⚠ Chưa lấy được'; }
+                            else { el.classList.add('is-wait'); el.textContent = '○ Chưa lấy'; }
+                        } catch (e) {}
+                    }
                     let takeLatest4Busy = false;
                     async function lay4SoMoiNhat(btn) {
                         if (takeLatest4Busy) return false;
                         takeLatest4Busy = true;
-                        const button = btn || document.getElementById('btnTakeLatest4');
+                        const button = document.getElementById('btnTakeLatest4') || btn;
                         const BTN_TEXT = '⚡ Lấy 4 số mới nhất';
                         let filled = false;
-                        if (button) { button.disabled = true; button.textContent = '⏳ Đang lấy 4 số mới nhất…'; }
+                        if (button) { button.disabled = true; button.textContent = BTN_TEXT; }
+                        setTakeLatest4Status('loading');
                         try {
                             const n = segPrefixLen();   // chế độ gọn đang cố định = 4 ô
                             // 1) Lấy kỳ VỪA RƠI từ game trước (nếu có token còn sống).
@@ -3592,18 +3702,16 @@ body {
                                 // bấm nút là để khỏi gõ tay -> thu bàn phím lại (nếu con trỏ đang ở ô nhập)
                                 try { const ae = document.activeElement; if (ae && /^segD[0-9]+$/.test(ae.id || '')) ae.blur(); } catch (e) {}
                                 filled = true;
-                                if (button) button.textContent = 'Đã lấy';
-                            } else if (button) {
-                                button.textContent = '⚠️ Chưa có đủ dữ liệu mới nhất';
+                                setTakeLatest4Status('ok');   // nút thứ 2 báo đã lấy thành công; nút chính giữ nguyên chữ
+                            } else {
+                                setTakeLatest4Status('err');
                             }
                         } catch (e) {
-                            if (button) button.textContent = '⚠️ Chưa lấy được — bấm thử lại';
+                            setTakeLatest4Status('err');
                             try { console.warn('[Lay4SoMoiNhat]', e); } catch (e2) {}
                         } finally {
-                            if (button) {
-                                if (!filled) { try { await sleep(1600); } catch (e) {} button.textContent = BTN_TEXT; }
-                                button.disabled = false;
-                            }
+                            if (!filled) { try { await sleep(1600); } catch (e) {} setTakeLatest4Status('wait'); }
+                            if (button) { button.textContent = BTN_TEXT; button.disabled = false; }
                             takeLatest4Busy = false;
                         }
                         return filled;
@@ -3824,7 +3932,7 @@ body {
                     })();
                     function onSegInput(el) {
                         try {
-                            bsPinned = false;   // gõ số mới → bỏ ghim, chờ kết quả mới
+                            bsPinned = false; bsSetRandomShown(false);   // gõ số mới → bỏ ghim + ẩn hàng random cũ, chờ kết quả mới
                             el.value = String(el.value || '').replace(/\D/g, '').slice(0, 1);
                             const ids = segInputIds();
                             const idx = ids.indexOf(el.id);
@@ -5149,4 +5257,4 @@ body {
                         });
                 </script>
    
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4c54bc6ad04c5e8',t:'MTc5MjMwMjk0Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4d324ed88560973',t:'MTc5MjQ0ODE1NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4c54bc6ad04c5e8',t:'MTc5MjMwMjk0Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4d33795cd59855c',t:'MTc5MjQ0ODkxOQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
