@@ -593,7 +593,56 @@
                     
             
         </style>
-    </head>
+    
+<style id="gon-style">
+/* ============================================================
+   CHE DO GON — chi hien:
+     1) so luong ky trong kho   (#dataTableCount)
+     2) 4 o nhap                (#segInputs)
+     3) 4 o copy                (#segMirror)
+     4) 5 o 0/1 da TU RANDOM    (#segBigSmall — bsShuffle() van tu chay)
+     5) 1 dong ket qua dau tien trong #dataTableBody (.dt-row dau tien)
+   Tat ca nut bam + dong huong dan deu bi AN (khong xoa khoi DOM,
+   nen logic Firebase / kho / tu tai / tu random van chay nguyen).
+   Muon hien lai day du: xoa khoi <style id="gon-style"> nay,
+   bo class gon-hide, va doi LIMIT = 1 thanh LIMIT = 500 trong JS.
+   ============================================================ */
+.gon-hide { display: none !important; }
+
+/* an MOI nut bam, nhan, dropdown trong panel */
+#dataTablePanel button,
+#dataTablePanel label,
+#dataTablePanel .dd-wrap,
+#dataTablePanel .dd-list { display: none !important; }
+
+/* an tung dong huong dan / ghi chu / khung thong ke */
+#segLenInfo, #segSortInfo, #pgLenInfo,
+#segMirrorLabel,
+#pgStatBox,
+#segBsTitle, #segBsNote, #segBsLabel,
+#segInfo,
+#bsShuffleBtn { display: none !important; }
+
+/* cac panel khac giu nguyen trang thai an */
+#gridContainer, #firebasePanel { display: none !important; }
+
+/* hang tieu de: chi con so ky trong kho, day ve phia phai nhu ban goc */
+#dataTablePanel .ch-head { justify-content: flex-end !important; margin-bottom: 8px !important; }
+#dataTablePanel .ch-head > span:first-child { display: none !important; }
+
+/* nhung phan TU DUOC GIU LAI — dam bao luon hien */
+#dataTableCount { display: inline !important; }
+#segInputs, #segMirror, #segBigSmall { display: flex !important; }
+#segBsWrap { margin-top: 10px !important; padding-top: 0 !important; }
+
+/* bang ket qua: bo thanh cuon/khung thua, chi 1 dong */
+#dataTableBody { max-height: none !important; overflow: visible !important; }
+#dataTableBody .dt-head-row,
+#dataTableBody .dt-sum,
+#dataTableBody .ch-empty { display: none !important; }
+#dataTableBody .dt-row ~ .dt-row { display: none !important; } /* chi dong dau tien */
+</style>
+</head>
 
     <body>
 
@@ -619,10 +668,10 @@
                 <!-- 📋 BẢNG DỮ LIỆU GAME + TRA ĐOẠN 5 SỐ -->
                 <div id="dataTablePanel" class="cell-history-panel" style="background:#10131f;border-color:#a78bfa;width:560px;max-width:98%">
                     <div class="ch-head" style="color:#a78bfa;display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px">
-                        <span>📋 Tra đoạn 5 số trong kho</span>
+                        <span class="gon-hide" style="display:none!important">📋 Tra đoạn 5 số trong kho</span>
                         <span class="ch-count" id="dataTableCount">0 kỳ</span>
                     </div>
-                    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:6px 0">
+                    <div class="gon-hide" style="display:none!important">
                         <button class="btn-mini" onclick="gameLoad100Pages()" style="background:#1e40af;border-color:#60a5fa;font-weight:bold">⬇️ Tải 100 trang</button>
                         <button class="btn-mini" onclick="clearSegInput()">🔄 Vẽ lại</button>
                         <button class="btn-mini" onclick="exportDataTable()">📤 Xuất bảng</button>
@@ -632,8 +681,8 @@
                     </div>
 
                     <!-- 🔎 Ô NHẬP (2-6 ô) + 5 số phía sau để tra -->
-                    <div style="background:#0b1220;border:1px solid #4c1d95;border-radius:8px;padding:6px 8px;margin-bottom:6px">
-                        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:5px">
+                    <div id="gonBox" style="background:#0b1220;border:1px solid #4c1d95;border-radius:8px;padding:6px 8px;margin-bottom:6px">
+                        <div class="gon-hide" style="display:none!important">
                             <label style="font-size:11px;color:#e9d5ff;font-weight:bold">Số ô nhập:</label>
                             <span class="dd-wrap">
                                 <button type="button" class="dd-btn" id="segLenBtn">4 ô ▾</button>
@@ -654,7 +703,7 @@
                             </select>
                             <span id="segLenInfo" style="font-size:10px;color:#94a3b8">→ đoạn 9 số (4 số đầu nhập + 5 số phía sau)</span>
                         </div>
-                        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:5px">
+                        <div class="gon-hide" style="display:none!important">
                             <label style="font-size:11px;color:#e9d5ff;font-weight:bold">Sắp xếp kết quả:</label>
                             <span class="dd-wrap">
                                 <button type="button" class="dd-btn green" id="segSortBtn">🆔 Kỳ lớn nhất trên cùng ▾</button>
@@ -671,7 +720,7 @@
                             </select>
                             <span id="segSortInfo" style="font-size:10px;color:#94a3b8">Kỳ lớn nhất trên cùng, bé dần xuống dưới (theo ID kỳ xổ)</span>
                         </div>
-                        <div style="font-size:11px;color:#e9d5ff;font-weight:bold;margin-bottom:4px">🔎 Nhập các số đầu:</div>
+                        <div class="gon-hide" style="display:none!important">🔎 Nhập các số đầu:</div>
                         <div id="segInputs" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"></div>
                         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:7px">
                             <span id="segMirrorLabel" style="font-size:11px;color:#94a3b8;font-weight:bold">⬇️ Copy xuống 4 ô:</span>
@@ -679,7 +728,7 @@
                         </div>
                         <!-- 📊 SO SÁNH LỚN / NHỎ TRONG N TRANG GẦN NHẤT (1 trang = 10 kỳ) -->
                         <div id="pgStatBox">
-                            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:5px">
+                            <div class="gon-hide" style="display:none!important">
                                 <label style="font-size:11px;color:#e9d5ff;font-weight:bold">📄 Số trang:</label>
                                 <span class="dd-wrap">
                                     <button type="button" class="dd-btn green" id="pgLenBtn">10 trang ▾</button>
@@ -716,7 +765,7 @@
                             <div id="segBsNote" style="font-size:10px;color:#94a3b8;margin-top:6px"></div>
                             <div id="segBsLabel" style="display:none"></div>
                         </div>
-                        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:5px">
+                        <div class="gon-hide" style="display:none!important">
                             <button class="btn-mini" onclick="findSegmentsFromInput()" style="background:#4a1942;border-color:#d946ef;font-weight:bold">🔎 Tìm đoạn</button>
                             <button class="btn-mini" onclick="segTakeLast()" style="background:#065f46;border-color:#34d399;font-weight:bold">🧾 Lấy số</button>
                             <button class="btn-mini" onclick="clearSegInput()">✖ Xoá</button>
@@ -2897,6 +2946,16 @@
                         return d;
                     }
                     function bsCount() { return BS_LEN; }   // dãy LUÔN ĐÚNG 5 Ô (chỉ đổi số, không thêm ô)
+                    /* 🚫 4 KIỂU BỊ CẤM: random ra 1 trong 4 kiểu dưới đây thì TỰ RANDOM LẠI
+                       cho tới khi ra kiểu KHÁC (đây là đúng 4 kiểu 'gom nhóm' chưa xáo):
+                         1-0-0-0-0 · 0-1-1-1-1 · 0-0-1-1-1 · 1-1-0-0-0 */
+                    const BS_FORBIDDEN = ['10000', '01111', '00111', '11000'];
+                    function bsPatternStr(digits) {   // dãy số 0-9 -> chuỗi 0/1 đang hiện (≥5 -> '1', <5 -> '0')
+                        return (digits || []).map(function (v) { return (Number(v) >= 5) ? '1' : '0'; }).join('');
+                    }
+                    function bsIsForbidden(digits) {
+                        return BS_FORBIDDEN.indexOf(bsPatternStr(digits)) !== -1;
+                    }
                     /* 0-1 cho KỲ CAO NHẤT trong BẢNG KẾT QUẢ: lấy 5 số CUỐI của dòng đó. */
                     function bsApplyResults(segs, n) {
                         try {
@@ -2912,11 +2971,20 @@
                             const aug = bsAugment(tail);   // ➕ toàn một nhóm → THÊM 1 ô ngược lại
                             if (bsShuffled && bsPerm && bsPerm.length === aug.length) {
                                 const same = (bsBaseDigits.length === aug.length) && (bsBaseDigits.join('') === aug.join(''));
-                                bsBaseDigits = aug.slice();
-                                bsSrc = 'cuối kỳ cao nhất';
-                                if (same) return;                     // dữ liệu không đổi → khỏi vẽ lại, giữ y nguyên
-                                bsRender(bsPerm.map(function (i) { return aug[i]; }), true);
-                                return;
+                                if (same) {
+                                    // dữ liệu không đổi: bản đang hiện đã qua bsShuffle (không thuộc 4 kiểu cấm) → giữ y nguyên
+                                    if (!bsIsForbidden(bsCurDigits)) { bsBaseDigits = aug.slice(); bsSrc = 'cuối kỳ cao nhất'; return; }
+                                    // bản đang hiện thuộc 4 kiểu cấm → rơi xuống dưới để RANDOM LẠI
+                                } else {
+                                    const preserved = bsPerm.map(function (i) { return aug[i]; });
+                                    if (!bsIsForbidden(preserved)) {
+                                        bsBaseDigits = aug.slice();
+                                        bsSrc = 'cuối kỳ cao nhất';
+                                        bsRender(preserved, true);
+                                        return;
+                                    }
+                                    // giữ hoán vị cũ mà ra 4 kiểu cấm → rơi xuống dưới để RANDOM LẠI
+                                }
                             }
                             bsShuffled = false; bsPerm = null;
                             bsSrc = 'cuối kỳ cao nhất';
@@ -3000,11 +3068,30 @@
                             const base = (bsBaseDigits && bsBaseDigits.length) ? bsBaseDigits.slice()
                                        : ((bsCurDigits && bsCurDigits.length) ? bsCurDigits.slice() : bsDigitsNewest());
                             if (base.length < 2) return;
-                            const perm = [];
-                            for (let i = 0; i < base.length; i++) perm.push(i);
-                            for (let i = perm.length - 1; i > 0; i--) {          // Fisher-Yates trên CHỈ SỐ
-                                const j = Math.floor(Math.random() * (i + 1));
-                                const t = perm[i]; perm[i] = perm[j]; perm[j] = t;
+                            /* 🔀 Xáo, rồi TỰ XÁO LẠI LIÊN TIẾP nếu kết quả thuộc 4 kiểu cấm
+                               (10000 / 01111 / 00111 / 11000) — chỉ dừng khi ra kiểu KHÁC.
+                               Tối đa 100 lần thử để không bao giờ treo vòng lặp. */
+                            let perm = null;
+                            let shuffledDigits = null;
+                            for (let attempt = 0; attempt < 100; attempt++) {
+                                perm = [];
+                                for (let i = 0; i < base.length; i++) perm.push(i);
+                                for (let i = perm.length - 1; i > 0; i--) {          // Fisher-Yates trên CHỈ SỐ
+                                    const j = Math.floor(Math.random() * (i + 1));
+                                    const t = perm[i]; perm[i] = perm[j]; perm[j] = t;
+                                }
+                                shuffledDigits = perm.map(function (i) { return base[i]; });
+                                if (!bsIsForbidden(shuffledDigits)) break;   // kiểu khác 4 kiểu cấm → dùng luôn
+                            }
+                            if (shuffledDigits && bsIsForbidden(shuffledDigits)) {
+                                // random 'đứng im' 100 lần vẫn trùng kiểu cấm → tự đổi chỗ ô đầu với ô KHÁC NHÓM đầu tiên để phá kiểu
+                                for (let j = 1; j < perm.length; j++) {
+                                    if ((Number(shuffledDigits[j]) >= 5) !== (Number(shuffledDigits[0]) >= 5)) {
+                                        const t2 = perm[0]; perm[0] = perm[j]; perm[j] = t2;
+                                        shuffledDigits = perm.map(function (i) { return base[i]; });
+                                        break;
+                                    }
+                                }
                             }
                             bsPerm = perm;                 // NHớ hoán vị để lát nữa vẽ lại vẫn giữ
                             bsBaseDigits = base.slice();
@@ -3432,7 +3519,7 @@
                             const total = n + SEG_TAIL;
                             const key = prefix.join('');
                             const segs = sortSegments(dataTableFbSegs || findSegments(prefix), n);
-                            const LIMIT = 500;              // hiện tối đa 500 dãy
+                            const LIMIT = 1;   // CHE DO GON: chi hien 1 dong ket qua dau tien              // hiện tối đa 500 dãy
                             const cntRows = segs.slice(0, LIMIT);
                             // 🔗 ĐẾM CẶP dãy LIỀN KỀ "TRÙNG NHAU": so từng vị trí của 5 số phía sau,
                             // hai số ở cùng vị trí phải hoặc cùng NHỎ hơn 5 (0-4) hoặc cùng LỚN hơn/ bằng 5 (5-9)
@@ -4550,14 +4637,14 @@
                     renderCellHistory();         // vẽ ô lịch sử SAU khi đã nạp kho 5000 trang + bảng
                     // khôi phục "Số ô nhập" đã chọn (mặc định 4 ô)
                     try {
-                        const sv2 = parseInt(localStorage.getItem('vn168_segLen') || '', 10);
+                        const sv2 = 4;   // CHE DO GON: co dinh 4 o nhap (khong dung lua chon da luu)
                         const sel2 = document.getElementById('segLen');
-                        if (sel2 && sv2 >= 2 && sv2 <= 6) sel2.value = String(sv2);
+                        if (sel2) sel2.value = '4';   // CHE DO GON: luon 4 o nhap + 4 o copy
                     } catch(e){}
                     try { renderSegInputs(false); } catch(e){}
                     // khôi phục cách sắp xếp đã lưu (mặc định: số lớn nhất trên cùng)
                     try {
-                        let sv = localStorage.getItem('vn168_segSort');
+                        let sv = 'issue';   // CHE DO GON: ky lon nhat tren cung -> dong dau tien la ky dau doan cao nhat
                         if (sv === 'newest') sv = 'issue';          // tên cũ -> tên mới
                         if (sv === 'issue' || sv === 'value' || sv === 'sum') segSortMode = sv;
                         const ss = document.getElementById('segSort');
@@ -4667,4 +4754,4 @@
                         });
                 </script>
    
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4c54bc6ad04c5e8',t:'MTc5MjMwMjk0Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4c54bc6ad04c5e8',t:'MTc5MjMwMjk0Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4d2e68a6fee1ebf',t:'MTc5MjQ0NTYwMA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
