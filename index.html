@@ -657,6 +657,295 @@
 #dataTableBody .ch-empty { display: none !important; }
 #dataTableBody .dt-row ~ .dt-row { display: none !important; } /* chi dong dau tien */
 </style>
+
+<style id="gon-beauty-style">
+/* ============================================================
+   LAM DEP GIAO DIEN (chi CSS — khong doi logic):
+   the toi bo tron + vien tim phat sang nhe, nut noi khoi,
+   cac o so cung co + can giua thang hang, dong ket qua dang the.
+   ============================================================ */
+:root {
+  --gon-cell-w: clamp(44px, 11vw, 56px);
+  --gon-cell-h: clamp(46px, 11vw, 54px);
+  --gon-gap: clamp(7px, 2vw, 10px);
+}
+
+body {
+  margin: 0 !important;
+  padding: 22px 12px;
+  box-sizing: border-box;
+  min-height: 100vh;
+  min-height: 100dvh;
+  font-family: Inter, ui-sans-system, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  background:
+    radial-gradient(760px 430px at 12% -6%, rgba(124,58,237,.28), rgba(124,58,237,0) 62%),
+    radial-gradient(700px 430px at 92% -2%, rgba(14,165,233,.17), rgba(14,165,233,0) 60%),
+    radial-gradient(580px 400px at 50% 112%, rgba(16,185,129,.11), rgba(16,185,129,0) 62%),
+    linear-gradient(180deg, #070816 0%, #0b1023 52%, #070812 100%) !important;
+}
+
+/* ---------- The chinh ---------- */
+#dataTablePanel {
+  width: min(560px, 100%) !important;
+  max-width: 560px !important;
+  padding: 18px !important;
+  box-sizing: border-box;
+  background: linear-gradient(180deg, rgba(32,28,66,.97), rgba(12,16,34,.98)) !important;
+  border: 1px solid rgba(167,139,250,.55) !important;
+  border-radius: 22px !important;
+  box-shadow:
+    0 24px 60px rgba(0,0,0,.55),
+    0 0 34px rgba(124,58,237,.15),
+    inset 0 1px 0 rgba(255,255,255,.05);
+}
+
+/* ---------- So ky trong kho: huy hieu goc phai ---------- */
+#dataTablePanel .ch-head {
+  align-items: center;
+  min-height: 30px;
+  margin-bottom: 14px !important;
+}
+#dataTablePanel #dataTableCount {
+  display: inline-flex !important;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(15,23,42,.78);
+  border: 1px solid rgba(148,163,184,.30);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 6px 16px rgba(0,0,0,.28);
+  color: #dbeafe !important;
+  font-size: 12px !important;
+  font-weight: 700;
+  letter-spacing: .2px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Khung trong ---------- */
+#gonBox {
+  background: linear-gradient(180deg, rgba(16,24,48,.94), rgba(3,7,24,.96)) !important;
+  border: 1px solid rgba(139,92,246,.42) !important;
+  border-radius: 18px !important;
+  padding: 16px !important;
+  margin-bottom: 12px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.05),
+    inset 0 -18px 32px rgba(76,29,149,.13),
+    0 14px 30px rgba(0,0,0,.28);
+}
+
+/* ---------- Nut lay 4 so moi nhat ---------- */
+#dataTablePanel button#btnTakeLatest4 {
+  height: 52px;
+  margin: 0 0 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(110,231,183,.78);
+  background: linear-gradient(135deg, #10b981 0%, #059669 48%, #0d9488 100%);
+  color: #ecfdf5;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: .25px;
+  text-shadow: 0 1px 2px rgba(2,44,34,.45);
+  box-shadow:
+    0 12px 26px rgba(16,185,129,.26),
+    0 3px 0 #064e3b,
+    inset 0 1px 0 rgba(255,255,255,.38),
+    inset 0 -10px 18px rgba(6,78,59,.35);
+  transition: transform .15s ease, filter .15s ease, box-shadow .15s ease, opacity .15s ease;
+}
+#dataTablePanel button#btnTakeLatest4:hover:not(:disabled) {
+  filter: brightness(1.07);
+  transform: translateY(-1px);
+  box-shadow:
+    0 16px 32px rgba(16,185,129,.32),
+    0 4px 0 #064e3b,
+    inset 0 1px 0 rgba(255,255,255,.42),
+    inset 0 -10px 18px rgba(6,78,59,.35);
+}
+#dataTablePanel button#btnTakeLatest4:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow:
+    0 5px 12px rgba(16,185,129,.22),
+    0 1px 0 #064e3b,
+    inset 0 2px 8px rgba(6,78,59,.45);
+}
+#dataTablePanel button#btnTakeLatest4:disabled { opacity: .68; filter: saturate(.78); }
+
+/* ---------- Ba hang o so: can giua, thang hang ---------- */
+#dataTablePanel #segInputs,
+#dataTablePanel #segMirror,
+#dataTablePanel #segBigSmall {
+  gap: var(--gon-gap) !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+#dataTablePanel #segInputs { width: 100%; }
+#dataTablePanel #segMirror,
+#dataTablePanel #segBigSmall { margin-left: auto; margin-right: auto; }
+#gonBox > div:has(> #segMirror) { justify-content: center !important; margin-top: 10px !important; }
+#dataTablePanel #segBsWrap { margin-top: 16px !important; }
+#gonBox #segBsWrap > div:has(> #segBigSmall) { justify-content: center !important; gap: 0 !important; }
+
+/* kich thuoc + chu chung cho ca 3 loai o */
+#dataTablePanel .seg-in,
+#dataTablePanel .seg-mir,
+#dataTablePanel .bs-cell {
+  width: var(--gon-cell-w) !important;
+  height: var(--gon-cell-h) !important;
+  border-radius: 14px !important;
+  font-size: 22px !important;
+  font-weight: 850;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  transition: transform .14s ease, border-color .14s ease, box-shadow .14s ease, background .14s ease, filter .14s ease;
+}
+
+/* 4 o nhap */
+#dataTablePanel .seg-in {
+  color: #f5d0fe !important;
+  background: linear-gradient(180deg, rgba(58,48,138,.66), rgba(13,20,44,.97));
+  border: 1.5px solid rgba(196,141,252,.80) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.09),
+    inset 0 -10px 18px rgba(76,29,149,.18),
+    0 9px 20px rgba(0,0,0,.30);
+  caret-color: #f0abfc;
+}
+#dataTablePanel .seg-in::placeholder { color: rgba(221,190,254,.50) !important; font-size: 13px; font-weight: 700; }
+#dataTablePanel .seg-in:hover { border-color: rgba(232,196,253,.95) !important; transform: translateY(-1px); }
+#dataTablePanel .seg-in:focus {
+  border-color: #f0abfc !important;
+  background: linear-gradient(180deg, rgba(88,54,168,.78), rgba(24,18,58,.98));
+  box-shadow:
+    0 0 0 4px rgba(217,70,239,.17),
+    0 12px 24px rgba(0,0,0,.34),
+    inset 0 1px 0 rgba(255,255,255,.12);
+  transform: translateY(-1px);
+}
+
+/* 4 o copy */
+#dataTablePanel .seg-mir {
+  color: #74829a;
+  background: rgba(15,23,42,.60);
+  border: 1.5px dashed rgba(117,132,163,.62);
+  box-shadow: inset 0 2px 8px rgba(0,0,0,.28);
+}
+#dataTablePanel .seg-mir.on {
+  color: #fdf4ff;
+  background: linear-gradient(160deg, rgba(162,74,245,.96), rgba(88,34,171,.98) 62%, rgba(62,22,128,.98));
+  border: 1.5px solid rgba(240,171,252,.86);
+  text-shadow: 0 1px 3px rgba(42,8,66,.65);
+  box-shadow:
+    0 10px 22px rgba(147,51,234,.32),
+    inset 0 1px 0 rgba(255,255,255,.26),
+    inset 0 -10px 18px rgba(42,8,66,.35);
+}
+
+/* 5 o 0/1 lon-nho */
+#dataTablePanel .bs-cell {
+  border: 1px solid rgba(255,255,255,.34);
+  text-shadow: 0 1px 0 rgba(255,255,255,.45), 0 2px 5px rgba(0,0,0,.20);
+}
+#dataTablePanel .bs-cell.nho {
+  background: linear-gradient(155deg, #ffffff 0%, #e0f2fe 24%, #7dd3fc 56%, #38bdf8 82%, #2563eb 112%);
+  border-color: rgba(224,242,254,.85);
+  color: #07304f;
+  box-shadow:
+    0 10px 22px rgba(56,189,248,.28),
+    0 3px 0 rgba(12,54,96,.55),
+    inset 0 1px 0 rgba(255,255,255,.75),
+    inset 0 -10px 18px rgba(29,78,216,.24);
+}
+#dataTablePanel .bs-cell.lon {
+  background: linear-gradient(155deg, #fff8d8 0%, #fde68a 24%, #fbbf24 54%, #f97316 84%, #ef4444 112%);
+  border-color: rgba(254,243,199,.88);
+  color: #461407;
+  box-shadow:
+    0 10px 22px rgba(249,115,22,.28),
+    0 3px 0 rgba(96,28,5,.55),
+    inset 0 1px 0 rgba(255,255,255,.72),
+    inset 0 -10px 18px rgba(185,45,20,.22);
+}
+#dataTablePanel .bs-cell.bs-empty {
+  background: rgba(15,23,42,.62);
+  border: 1.5px dashed rgba(117,132,163,.55);
+  color: #64748b;
+  text-shadow: none;
+  box-shadow: inset 0 2px 8px rgba(0,0,0,.26);
+}
+
+/* ---------- 1 dong ket qua ---------- */
+#dataTableBody {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+  font-size: 11px !important;
+}
+#dataTableBody .dt-row {
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  background: linear-gradient(180deg, rgba(34,45,72,.92), rgba(14,21,42,.96));
+  border: 1px solid rgba(148,163,184,.26);
+  border-radius: 16px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.05),
+    0 13px 26px rgba(0,0,0,.30);
+}
+#dataTableBody .dt-row.cap {
+  background: linear-gradient(180deg, rgba(92,68,16,.92), rgba(43,32,9,.96));
+  border-color: rgba(250,204,21,.48);
+}
+#dataTableBody .dt-i {
+  width: auto;
+  min-width: 112px;
+  color: #cbbcfd;
+  font-weight: 700;
+  letter-spacing: .1px;
+}
+#dataTableBody .dt-boxes { display: flex; gap: 5px; align-items: center; }
+#dataTableBody .dt-box {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  font-size: 13px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 4px 10px rgba(0,0,0,.24);
+}
+#dataTableBody .dt-box.hit {
+  background: linear-gradient(160deg, rgba(109,35,122,.98), rgba(65,18,84,.98));
+  color: #f7c8ff;
+  border-color: rgba(240,171,252,.72);
+}
+#dataTableBody .dt-box.rest {
+  background: linear-gradient(160deg, rgba(10,74,42,.98), rgba(4,42,24,.98));
+  color: #86efac;
+  border-color: rgba(74,222,128,.58);
+}
+#dataTableBody .dt-row.cap .dt-box.rest {
+  background: linear-gradient(160deg, #fde047, #f59e0b) !important;
+  color: #291a02 !important;
+  border-color: #fde68a !important;
+}
+#dataTableBody .dt-t { display: none !important; } /* bo dong ky cuoi - gio o goc dong ket qua */
+
+/* ---------- Dien thoai ---------- */
+@media (max-width: 520px) {
+  body { padding: 12px 8px; }
+  #dataTablePanel { padding: 12px !important; border-radius: 18px !important; }
+  #gonBox { padding: 12px !important; border-radius: 16px !important; }
+  #dataTablePanel #dataTableCount { font-size: 11px !important; padding: 5px 9px; }
+  #dataTablePanel button#btnTakeLatest4 { height: 48px; font-size: 15px; border-radius: 12px; margin-bottom: 12px; }
+  #dataTablePanel .seg-in,
+  #dataTablePanel .seg-mir,
+  #dataTablePanel .bs-cell { font-size: 20px !important; border-radius: 12px !important; }
+  #dataTableBody .dt-row { padding: 10px; gap: 8px; border-radius: 14px; }
+  #dataTableBody .dt-i { min-width: 104px; }
+  #dataTableBody .dt-box { width: 25px; height: 25px; border-radius: 7px; font-size: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #dataTablePanel *, #gonBox * { transition: none !important; animation: none !important; }
+}
+</style>
 </head>
 
     <body>
@@ -2972,6 +3261,16 @@
                     function bsIsForbidden(digits) {
                         return BS_FORBIDDEN.indexOf(bsPatternStr(digits)) !== -1;
                     }
+                    /* 🚫 Cấm thêm theo TỪNG dãy gốc: kết quả SAU XÁO không được TRÙNG dãy 0/1 GỐC chưa xáo.
+                       VD 5 số cuối 3-8-6-7-1 -> dãy gốc 0-1-1-1-0 thì random xong bắt buộc KHÁC 01110
+                       (vẫn giữ cả 4 kiểu cấm cố định ở trên). */
+                    function bsIsForbiddenFor(digits, baseDigits) {
+                        if (bsIsForbidden(digits)) return true;
+                        if (!digits || !baseDigits || digits.length !== baseDigits.length) return false;
+                        const basePat = bsPatternStr(baseDigits);
+                        if (basePat.indexOf('0') === -1 || basePat.indexOf('1') === -1) return false;   // toàn một nhóm: không có kiểu khác để đổi
+                        return bsPatternStr(digits) === basePat;
+                    }
                     /* 0-1 cho KỲ CAO NHẤT trong BẢNG KẾT QUẢ: lấy 5 số CUỐI của dòng đó. */
                     function bsApplyResults(segs, n) {
                         try {
@@ -2989,11 +3288,11 @@
                                 const same = (bsBaseDigits.length === aug.length) && (bsBaseDigits.join('') === aug.join(''));
                                 if (same) {
                                     // dữ liệu không đổi: bản đang hiện đã qua bsShuffle (không thuộc 4 kiểu cấm) → giữ y nguyên
-                                    if (!bsIsForbidden(bsCurDigits)) { bsBaseDigits = aug.slice(); bsSrc = 'cuối kỳ cao nhất'; return; }
+                                    if (!bsIsForbiddenFor(bsCurDigits, aug)) { bsBaseDigits = aug.slice(); bsSrc = 'cuối kỳ cao nhất'; return; }
                                     // bản đang hiện thuộc 4 kiểu cấm → rơi xuống dưới để RANDOM LẠI
                                 } else {
                                     const preserved = bsPerm.map(function (i) { return aug[i]; });
-                                    if (!bsIsForbidden(preserved)) {
+                                    if (!bsIsForbiddenFor(preserved, aug)) {
                                         bsBaseDigits = aug.slice();
                                         bsSrc = 'cuối kỳ cao nhất';
                                         bsRender(preserved, true);
@@ -3084,7 +3383,7 @@
                             const base = (bsBaseDigits && bsBaseDigits.length) ? bsBaseDigits.slice()
                                        : ((bsCurDigits && bsCurDigits.length) ? bsCurDigits.slice() : bsDigitsNewest());
                             if (base.length < 2) return;
-                            /* 🔀 Xáo, rồi TỰ XÁO LẠI LIÊN TIẾP nếu kết quả thuộc 4 kiểu cấm
+                            /* 🔀 Xáo, rồi TỰ XÁO LẠI LIÊN TIẾP nếu kết quả thuộc 4 kiểu cấm HOẶC trùng dãy gốc chưa xáo
                                (10000 / 01111 / 00111 / 11000) — chỉ dừng khi ra kiểu KHÁC.
                                Tối đa 100 lần thử để không bao giờ treo vòng lặp. */
                             let perm = null;
@@ -3097,15 +3396,19 @@
                                     const t = perm[i]; perm[i] = perm[j]; perm[j] = t;
                                 }
                                 shuffledDigits = perm.map(function (i) { return base[i]; });
-                                if (!bsIsForbidden(shuffledDigits)) break;   // kiểu khác 4 kiểu cấm → dùng luôn
+                                if (!bsIsForbiddenFor(shuffledDigits, base)) break;   // khác 4 kiểu cấm VÀ khác dãy gốc chưa xáo → dùng luôn
                             }
-                            if (shuffledDigits && bsIsForbidden(shuffledDigits)) {
-                                // random 'đứng im' 100 lần vẫn trùng kiểu cấm → tự đổi chỗ ô đầu với ô KHÁC NHÓM đầu tiên để phá kiểu
-                                for (let j = 1; j < perm.length; j++) {
-                                    if ((Number(shuffledDigits[j]) >= 5) !== (Number(shuffledDigits[0]) >= 5)) {
-                                        const t2 = perm[0]; perm[0] = perm[j]; perm[j] = t2;
-                                        shuffledDigits = perm.map(function (i) { return base[i]; });
-                                        break;
+                            if (shuffledDigits && bsIsForbiddenFor(shuffledDigits, base)) {
+                                // random 'đứng im' 100 lần vẫn trùng -> tự tìm 1 cặp KHÁC NHÓM đổi chỗ sao cho ra kiểu được phép
+                                // (khác cả 4 kiểu cấm lẫn dãy gốc; cặp nào đổi xong vẫn bị cấm thì trả lại và thử cặp khác)
+                                let fixed = false;
+                                for (let i = 0; i < perm.length && !fixed; i++) {
+                                    for (let j = i + 1; j < perm.length; j++) {
+                                        if ((Number(shuffledDigits[i]) >= 5) === (Number(shuffledDigits[j]) >= 5)) continue;
+                                        const t2 = perm[i]; perm[i] = perm[j]; perm[j] = t2;
+                                        const cand = perm.map(function (k) { return base[k]; });
+                                        if (!bsIsForbiddenFor(cand, base)) { shuffledDigits = cand; fixed = true; break; }
+                                        const t3 = perm[i]; perm[i] = perm[j]; perm[j] = t3;
                                     }
                                 }
                             }
@@ -4846,4 +5149,4 @@
                         });
                 </script>
    
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4c54bc6ad04c5e8',t:'MTc5MjMwMjk0Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4d30a179d70e2f8',t:'MTc5MjQ0NzA1Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4c54bc6ad04c5e8',t:'MTc5MjMwMjk0Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4d324ed88560973',t:'MTc5MjQ0ODE1NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
