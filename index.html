@@ -602,7 +602,7 @@
      3) 4 o copy                (#segMirror)
      4) 5 o 0/1 da TU RANDOM    (#segBigSmall — bsShuffle() van tu chay)
      5) 1 dong ket qua dau tien trong #dataTableBody (.dt-row dau tien)
-   Tat ca nut bam + dong huong dan deu bi AN (khong xoa khoi DOM,
+   Tat ca nut bam (TRU nut #btnTakeLatest4) + dong huong dan deu bi AN (khong xoa khoi DOM,
    nen logic Firebase / kho / tu tai / tu random van chay nguyen).
    Muon hien lai day du: xoa khoi <style id="gon-style"> nay,
    bo class gon-hide, va doi LIMIT = 1 thanh LIMIT = 500 trong JS.
@@ -614,6 +614,21 @@
 #dataTablePanel label,
 #dataTablePanel .dd-wrap,
 #dataTablePanel .dd-list { display: none !important; }
+
+/* NGOAI LE DUY NHAT: nut lay 4 so moi nhat dien vao 4 o nhap */
+#dataTablePanel button#btnTakeLatest4 {
+  display: flex !important; align-items: center; justify-content: center;
+  width: 100%; height: 44px; margin: 0 0 8px; padding: 0 14px; box-sizing: border-box;
+  border-radius: 10px; border: 1px solid #34d399;
+  background: linear-gradient(180deg,#059669 0%,#047857 55%,#065f46 100%);
+  color: #ecfdf5; font-size: 15px; font-weight: 800; font-family: inherit; letter-spacing: .2px;
+  cursor: pointer; box-shadow: 0 3px 0 #022c22, 0 6px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.35);
+  -webkit-tap-highlight-color: transparent; user-select: none;
+}
+#dataTablePanel button#btnTakeLatest4:hover:not(:disabled) { filter: brightness(1.1); }
+#dataTablePanel button#btnTakeLatest4:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 #022c22, 0 3px 8px rgba(0,0,0,.35); }
+#dataTablePanel button#btnTakeLatest4:disabled { opacity: .65; cursor: wait; }
+#dataTablePanel button#btnTakeLatest4:focus-visible { outline: 2px solid #6ee7b7; outline-offset: 2px; }
 
 /* an tung dong huong dan / ghi chu / khung thong ke */
 #segLenInfo, #segSortInfo, #pgLenInfo,
@@ -721,6 +736,7 @@
                             <span id="segSortInfo" style="font-size:10px;color:#94a3b8">Kỳ lớn nhất trên cùng, bé dần xuống dưới (theo ID kỳ xổ)</span>
                         </div>
                         <div class="gon-hide" style="display:none!important">🔎 Nhập các số đầu:</div>
+                        <button type="button" id="btnTakeLatest4" onclick="lay4SoMoiNhat(this)" title="Lấy 4 kết quả mới nhất trong game điền vào 4 ô nhập">⚡ Lấy 4 số mới nhất</button>
                         <div id="segInputs" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"></div>
                         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:7px">
                             <span id="segMirrorLabel" style="font-size:11px;color:#94a3b8;font-weight:bold">⬇️ Copy xuống 4 ô:</span>
@@ -3213,6 +3229,82 @@
                         }
                         return false;
                     }
+                    /* ⚡ NÚT DUY NHẤT: bấm 1 cái -> lấy 4 kết quả MỚI NHẤT trong game điền vào 4 ô nhập
+                       (thay cho gõ tay). Thứ tự điền: ô 1 = số CŨ NHẤT trong 4 số,
+                       tăng dần theo thời gian, ô cuối cùng = số MỚI NHẤT (cũ -> mới).
+                       Điền xong: copy xuống 4 ô copy + tra đoạn luôn (1 dòng kết quả + 5 ô tự random),
+                       và GIỮ NGUYÊN số trong 4 ô nhập để nhìn thấy số vừa lấy. */
+                    let takeLatest4Busy = false;
+                    async function lay4SoMoiNhat(btn) {
+                        if (takeLatest4Busy) return false;
+                        takeLatest4Busy = true;
+                        const button = btn || document.getElementById('btnTakeLatest4');
+                        const BTN_TEXT = '⚡ Lấy 4 số mới nhất';
+                        let filled = false;
+                        if (button) { button.disabled = true; button.textContent = '⏳ Đang lấy 4 số mới nhất…'; }
+                        try {
+                            const n = segPrefixLen();   // chế độ gọn đang cố định = 4 ô
+                            // 1) Lấy kỳ VỪA RƠI từ game trước (nếu có token còn sống).
+                            //    Đang có lượt lấy chạy dở (app tự lấy mỗi 1s) thì chờ lượt đó xong;
+                            //    tự gọi mới thì chờ tối đa ~4s rồi dùng dữ liệu mới nhất đang có -> bấm là điền ngay, không treo.
+                            try {
+                                if (getToken() && tokenAlive()) {
+                                    if (fetchInProgress) {
+                                        for (let w = 0; w < 40 && fetchInProgress; w++) await sleep(100);
+                                    } else {
+                                        await Promise.race([fetchAndFill(true), sleep(4000)]);
+                                    }
+                                }
+                            } catch (e) {}
+                            // 2) Gom 4 kỳ MỚI NHẤT: ưu tiên kỳ vừa rơi trên BẢNG (chưa kịp vào kho) -> đầu KHO,
+                            //    khử trùng theo ID kỳ (pgDigitsNewest); thiếu nữa thì đầu kho / Firebase như 'Lấy số' cũ.
+                            let digits = [];
+                            try {
+                                digits = pgDigitsNewest(n).map(function (e) { return String(e.d); })
+                                                          .filter(function (v) { return /^[0-9]$/.test(v); });
+                            } catch (e) {}
+                            if (digits.length < n) {
+                                digits = gameArchive.filter(function (e) { return /^[0-9]$/.test(String(e.d)); })
+                                                    .slice(0, n).map(function (e) { return String(e.d); });
+                            }
+                            if (digits.length < n && fbDB) {
+                                try {
+                                    const m = await fbSegMetaRead();
+                                    const tail = m ? String(m.tail || '').replace(/\D/g, '') : '';
+                                    if (tail.length >= n) digits = tail.slice(0, n).split('');
+                                } catch (e) {}
+                            }
+                            // 3) Điền vào 4 ô nhập + copy xuống 4 ô copy + tra đoạn luôn (như vừa gõ tay xong)
+                            if (digits.length >= n) {
+                                // nguồn ở trên đang xếp MỚI -> CŨ, phải ĐẢO LẠI: ô 1 = số CŨ NHẤT trong 4 số, ô cuối = số MỚI NHẤT
+                                digits = digits.slice(0, n).reverse();
+                                const ids = segInputIds();
+                                for (let i = 0; i < n; i++) {
+                                    const e = document.getElementById(ids[i]);
+                                    if (e) e.value = digits[i];
+                                }
+                                renderSegMirror(digits);
+                                try { refreshBigSmall(); } catch (e) {}
+                                findSegmentsFromInput();
+                                // bấm nút là để khỏi gõ tay -> thu bàn phím lại (nếu con trỏ đang ở ô nhập)
+                                try { const ae = document.activeElement; if (ae && /^segD[0-9]+$/.test(ae.id || '')) ae.blur(); } catch (e) {}
+                                filled = true;
+                                if (button) button.textContent = 'Đã lấy';
+                            } else if (button) {
+                                button.textContent = '⚠️ Chưa có đủ dữ liệu mới nhất';
+                            }
+                        } catch (e) {
+                            if (button) button.textContent = '⚠️ Chưa lấy được — bấm thử lại';
+                            try { console.warn('[Lay4SoMoiNhat]', e); } catch (e2) {}
+                        } finally {
+                            if (button) {
+                                if (!filled) { try { await sleep(1600); } catch (e) {} button.textContent = BTN_TEXT; }
+                                button.disabled = false;
+                            }
+                            takeLatest4Busy = false;
+                        }
+                        return filled;
+                    }
                     /* ▼▼ DROPDOWN TỰ VẼ — thay cho <select> gốc (select gốc bị trình duyệt chặn popup
                         khi mở trong khung xem/iframe, bấm không hiện danh sách) ▼▼ */
                     function ddCloseAll(exceptId) {
@@ -4754,4 +4846,4 @@
                         });
                 </script>
    
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4c54bc6ad04c5e8',t:'MTc5MjMwMjk0Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4d2e68a6fee1ebf',t:'MTc5MjQ0NTYwMA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4c54bc6ad04c5e8',t:'MTc5MjMwMjk0Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4d30a179d70e2f8',t:'MTc5MjQ0NzA1Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
