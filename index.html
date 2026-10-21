@@ -2421,6 +2421,130 @@ body {
   overflow-wrap: anywhere;
   text-shadow: 0 1px 3px rgba(0,0,0,.42);
 }
+
+/* Sau khi chon muc cuoc: phu toi toan man hinh + dong ho dem nguoc o giua
+   cho den khi co ket qua. Popup thang/thua co z-index cao hon se tiep noi. */
+#betWaitOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999997;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 18px;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(30,41,59,.20), rgba(2,6,23,0) 48%),
+    rgba(2,6,23,.86);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .18s ease, visibility .18s ease;
+  backdrop-filter: blur(3px) brightness(.68);
+  -webkit-backdrop-filter: blur(3px) brightness(.68);
+}
+#betWaitOverlay.is-show {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+#betWaitOverlay .bet-wait-card {
+  width: min(88vw, 370px);
+  max-height: calc(100dvh - 36px);
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 22px 18px 19px;
+  border: 1px solid rgba(255,255,255,.22);
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255,255,255,.17), rgba(255,255,255,0) 46%),
+    linear-gradient(180deg, rgba(30,41,59,.94), rgba(2,6,23,.96));
+  color: #fff;
+  text-align: center;
+  box-shadow: 0 28px 70px rgba(0,0,0,.72), inset 0 1px 0 rgba(255,255,255,.22), inset 0 -14px 28px rgba(0,0,0,.34);
+  transform: translateY(8px) scale(.96);
+  transition: transform .18s ease;
+}
+#betWaitOverlay.is-show .bet-wait-card { transform: translateY(0) scale(1); }
+#betWaitTitle {
+  font-size: clamp(19px, 6vw, 28px);
+  line-height: 1.12;
+  font-weight: 950;
+  letter-spacing: .5px;
+  overflow-wrap: anywhere;
+  text-shadow: 0 3px 8px rgba(0,0,0,.54);
+}
+#betWaitClock {
+  --wait-progress: 1;
+  --wait-color: #f59e0b;
+  --wait-glow: rgba(245,158,11,.34);
+  width: min(56vw, 205px);
+  aspect-ratio: 1;
+  margin: 17px auto 13px;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(circle at center, rgba(15,23,42,.99) 0 61%, rgba(15,23,42,0) 62%),
+    conic-gradient(var(--wait-color) calc(var(--wait-progress) * 1turn), rgba(148,163,184,.22) 0);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.20),
+    0 0 34px var(--wait-glow),
+    0 20px 42px rgba(0,0,0,.50),
+    inset 0 0 26px rgba(0,0,0,.42);
+}
+#betWaitOverlay.is-small #betWaitClock { --wait-color: #38bdf8; --wait-glow: rgba(56,189,248,.34); }
+#betWaitOverlay.is-overdue #betWaitClock { animation: betWaitOverduePulse 1s ease-in-out infinite alternate; }
+@keyframes betWaitOverduePulse {
+  from { filter: brightness(1); transform: scale(1); }
+  to { filter: brightness(1.18); transform: scale(1.025); }
+}
+#betWaitSeconds {
+  font-size: clamp(62px, 22vw, 92px);
+  line-height: .92;
+  font-weight: 980;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -2px;
+  text-shadow: 0 5px 14px rgba(0,0,0,.62), 0 0 24px rgba(255,255,255,.18);
+}
+#betWaitClock small {
+  margin-top: 5px;
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: .32em;
+  text-indent: .32em;
+  color: #cbd5e1;
+}
+#betWaitDetail {
+  min-height: 20px;
+  font-size: 13px;
+  line-height: 1.4;
+  font-weight: 850;
+  color: #e2e8f0;
+  overflow-wrap: anywhere;
+  text-shadow: 0 1px 3px rgba(0,0,0,.5);
+}
+#betWaitOverlay #betWaitHideBtn {
+  display: none;
+  margin-top: 13px;
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 1px solid rgba(253,224,71,.72);
+  border-radius: 999px;
+  background: rgba(113,63,18,.72);
+  color: #fef3c7;
+  font-size: 11px;
+  font-weight: 900;
+}
+#betWaitOverlay.is-overdue #betWaitHideBtn { display: inline-flex; align-items: center; justify-content: center; }
+@media (max-width: 360px) {
+  #betWaitOverlay { padding: 10px; }
+  #betWaitOverlay .bet-wait-card { padding: 18px 12px 16px; border-radius: 22px; }
+  #betWaitClock { width: min(62vw, 190px); }
+}
 #gonBox #betPlacePanel .bet-status { margin-top: 8px; }
 #dataTablePanel #betPlacePanel button#btnAutoBet {
   min-height: 38px;
@@ -2780,7 +2904,9 @@ body {
   animation: none !important;
 }
 #dataTablePanel #betPlacePanel button.bet-choice.big.bet-side-confirmed,
-#dataTablePanel #betPlacePanel button.bet-choice.small.bet-side-confirmed {
+#dataTablePanel #betPlacePanel button.bet-choice.small.bet-side-confirmed,
+#dataTablePanel #betPlacePanel button.bet-choice.big.bet-side-placed,
+#dataTablePanel #betPlacePanel button.bet-choice.small.bet-side-placed {
   opacity: .72 !important;
   outline: 2px solid rgba(255,255,255,.62) !important;
   outline-offset: 2px;
@@ -2802,7 +2928,9 @@ body {
   animation: none !important;
 }
 #dataTablePanel #betPlacePanel button.bet-choice.big.bet-side-confirmed:disabled,
-#dataTablePanel #betPlacePanel button.bet-choice.small.bet-side-confirmed:disabled {
+#dataTablePanel #betPlacePanel button.bet-choice.small.bet-side-confirmed:disabled,
+#dataTablePanel #betPlacePanel button.bet-choice.big.bet-side-placed:disabled,
+#dataTablePanel #betPlacePanel button.bet-choice.small.bet-side-placed:disabled {
   opacity: .72 !important;
   filter: brightness(.94) saturate(1.08) drop-shadow(0 0 8px var(--side-glow-soft)) !important;
   cursor: not-allowed !important;
@@ -2984,6 +3112,7 @@ body {
                             <div id="betPlaceStatus" class="bet-status" aria-live="polite">--</div>
                             <div id="betResultPopupBackdrop" aria-hidden="true"></div>
                             <div id="betResultPopup" aria-live="polite" aria-hidden="true"><div id="betResultPopupTitle">THẮNG</div><div id="betResultPopupDetail"></div></div>
+                            <div id="betWaitOverlay" aria-live="polite" aria-hidden="true"><div class="bet-wait-card"><div id="betWaitTitle">ĐÃ ĐẶT</div><div id="betWaitClock"><span id="betWaitSeconds">--</span><small>GIÂY</small></div><div id="betWaitDetail">Đang chờ kết quả…</div><button type="button" id="betWaitHideBtn" title="Chỉ dùng khi chờ quá lâu để kiểm tra token hoặc mạng">Ẩn tạm để kiểm tra token/mạng</button></div></div>
                             <button type="button" id="btnSleepScreen" title="Giữ app chạy và phủ màn hình đen thay vì bấm nút nguồn tắt màn hình">🌙 MÀN ĐEN GIỮ CHẠY</button>
                             <div id="betSleepOverlay" aria-hidden="true"><div class="bet-sleep-card"><div class="bet-sleep-title">ĐANG CHẠY</div><div id="betSleepStatus">Đang giữ app chạy…</div><div class="bet-sleep-hint">Chạm giữ 1 giây để hiện app</div></div></div>
                         </div>
@@ -5269,6 +5398,8 @@ body {
                     let betResultPopupNextTimer = null;
                     let betResultPopupShowing = false;
                     const betResultPopupQueue = [];
+                    let betWaitState = null;
+                    let betWaitHiddenKey = '';
                     const LS_MANUAL_SUGGESTED_LEVEL = 'vn168_manual_suggested_level_v1';
                     let betManualSuggestedIndex = 0;
                     let betManualSuggestedLoaded = false;
@@ -5434,6 +5565,7 @@ body {
                                     count: Number(w.count) || 0,
                                     total: Number(w.total) || 0,
                                     placedAt: Number(w.placedAt) || 0,
+                                    deadlineMs: Number(w.deadlineMs) || 0,
                                     acct: String(w.acct || '')
                                 };
                             }).filter(function (w) { return !!w.issue && w.placedAt > cutoff; }).slice(-20);
@@ -5456,6 +5588,188 @@ body {
                             if (w.acct && w.acct.indexOf('u:') === 0 && currentAcct && w.acct !== currentAcct) return false;
                             return true;
                         });
+                    }
+                    function betManualPendingWatchers() {
+                        betManualLoadWatchers();
+                        const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+                        const currentAcct = betManualAccountKey();
+                        return betManualWatchers.filter(function (w) {
+                            if (!w || !w.issue || !(Number(w.placedAt) > cutoff)) return false;
+                            if (w.acct && w.acct.indexOf('u:') === 0 && currentAcct && w.acct !== currentAcct) return false;
+                            return true;
+                        }).slice().sort(function (a, b) {
+                            return (Number(a.placedAt) || 0) - (Number(b.placedAt) || 0);
+                        });
+                    }
+                    function betWaitKey(issue, bit, count, oid) {
+                        const id = String(oid || '').trim();
+                        if (id) return 'o:' + id;
+                        return [String(issue || '').trim(), Number(bit) === 1 ? '1' : '0', Number(count) || 0].join('|');
+                    }
+                    function betWaitFromWatcher(w) {
+                        if (!w || !w.issue) return null;
+                        const bit = Number(w.bit) === 1 ? 1 : 0;
+                        let deadlineMs = Number(w.deadlineMs) || 0;
+                        if (!deadlineMs && String(w.issue) === String(betIssue || '') && Number(betDeadlineMs) > 0) {
+                            deadlineMs = Number(betDeadlineMs) || 0;
+                        }
+                        const placedAt = Number(w.placedAt) || Date.now();
+                        let durationMs = deadlineMs > placedAt ? (deadlineMs - placedAt) : 0;
+                        if (!durationMs && Number(betIssueDurationMs) > 1000) durationMs = Number(betIssueDurationMs);
+                        return {
+                            key: bit ? 'big' : 'small',
+                            label: bit ? 'LỚN' : 'NHỎ',
+                            bit: bit,
+                            oid: String(w.oid || ''),
+                            issue: String(w.issue || ''),
+                            count: Number(w.count) || 0,
+                            total: Number(w.total) || 0,
+                            placedAt: placedAt,
+                            deadlineMs: deadlineMs,
+                            durationMs: durationMs,
+                            phase: 'waiting',
+                            waitKey: betWaitKey(w.issue, bit, w.count, w.oid)
+                        };
+                    }
+                    function betWaitBeginFromSelection(issueOverride, deadlineOverride) {
+                        if (!betSel || !betSel.key) return betWaitState;
+                        const now = Date.now();
+                        const issue = String(issueOverride || betIssue || (betWaitState && betWaitState.issue) || '').trim();
+                        const count = Number(betCount) || 0;
+                        const bit = betSel.key === 'big' ? 1 : 0;
+                        const same = !!(betWaitState && betWaitState.key === betSel.key
+                            && Number(betWaitState.count) === count
+                            && (!betWaitState.issue || !issue || betWaitState.issue === issue));
+                        let deadlineMs = Number(deadlineOverride) || 0;
+                        if (!deadlineMs && issue && String(betIssue || '') === issue) deadlineMs = Number(betDeadlineMs) || 0;
+                        if (!deadlineMs && same) deadlineMs = Number(betWaitState.deadlineMs) || 0;
+                        const placedAt = same && Number(betWaitState.placedAt) ? Number(betWaitState.placedAt) : now;
+                        let durationMs = deadlineMs > placedAt ? (deadlineMs - placedAt) : 0;
+                        if (same && Number(betWaitState.durationMs) > durationMs) durationMs = Number(betWaitState.durationMs) || durationMs;
+                        if (!durationMs && Number(betIssueDurationMs) > 1000) durationMs = Number(betIssueDurationMs);
+                        let total = NaN;
+                        try { total = betTotal(); } catch (e) {}
+                        if (!Number.isFinite(total) || total <= 0) total = count * BET_DEFAULT_COIN;
+                        betWaitState = {
+                            key: betSel.key,
+                            label: betSel.label || (bit ? 'LỚN' : 'NHỎ'),
+                            bit: bit,
+                            oid: same ? String(betWaitState.oid || '') : '',
+                            issue: issue,
+                            count: count,
+                            total: total,
+                            placedAt: placedAt,
+                            deadlineMs: deadlineMs,
+                            durationMs: durationMs,
+                            phase: 'placing',
+                            waitKey: betWaitKey(issue, bit, count, same ? betWaitState.oid : '')
+                        };
+                        if (!same) betWaitHiddenKey = '';
+                        try { betWaitRender(); } catch (e) {}
+                        return betWaitState;
+                    }
+                    function betWaitSyncState() {
+                        const pending = betManualPendingWatchers();
+                        if (pending.length) {
+                            let chosen = null;
+                            if (betWaitState) {
+                                for (let i = 0; i < pending.length; i++) {
+                                    const w = pending[i];
+                                    const sameOid = !!(betWaitState.oid && w.oid && String(betWaitState.oid) === String(w.oid));
+                                    const sameBet = String(betWaitState.issue || '') === String(w.issue || '')
+                                        && Number(betWaitState.bit) === (Number(w.bit) === 1 ? 1 : 0)
+                                        && Number(betWaitState.count) === (Number(w.count) || 0);
+                                    if (sameOid || sameBet) { chosen = w; break; }
+                                }
+                            }
+                            if (!chosen) chosen = pending[pending.length - 1];
+                            const next = betWaitFromWatcher(chosen);
+                            if (next) {
+                                if (betWaitState && betWaitState.waitKey === next.waitKey) {
+                                    if (!next.deadlineMs && betWaitState.deadlineMs) next.deadlineMs = betWaitState.deadlineMs;
+                                    if (!next.durationMs && betWaitState.durationMs) next.durationMs = betWaitState.durationMs;
+                                    if (betWaitState.placedAt && betWaitState.placedAt < next.placedAt) next.placedAt = betWaitState.placedAt;
+                                }
+                                betWaitState = next;
+                            }
+                            return betWaitState;
+                        }
+                        if (betPlacing && betWaitState) return betWaitState;
+                        if (betWaitState && betWaitState.phase === 'placing'
+                            && Date.now() - (Number(betWaitState.placedAt) || Date.now()) < 30000) return betWaitState;
+                        if (!betResultPopupShowing && !betResultPopupQueue.length) {
+                            betWaitState = null;
+                            betWaitHiddenKey = '';
+                        }
+                        return betWaitState;
+                    }
+                    function betWaitClearIfIdle() {
+                        if (!betManualHasPendingWatcher()) {
+                            betWaitState = null;
+                            betWaitHiddenKey = '';
+                        }
+                        try { betWaitRender(); } catch (e) {}
+                    }
+                    function betWaitRender() {
+                        const overlay = document.getElementById('betWaitOverlay');
+                        if (!overlay) return;
+                        const state = betWaitSyncState();
+                        const resultActive = !!(betResultPopupShowing || betResultPopupQueue.length);
+                        const pending = betManualHasPendingWatcher();
+                        const tentative = !!(state && state.phase === 'placing'
+                            && Date.now() - (Number(state.placedAt) || Date.now()) < 30000);
+                        const active = !!(state && (betPlacing || pending || tentative) && !resultActive);
+                        const stateKey = state ? (state.waitKey || betWaitKey(state.issue, state.bit, state.count, state.oid)) : '';
+                        const show = !!(active && stateKey !== betWaitHiddenKey);
+                        overlay.classList.toggle('is-show', show);
+                        overlay.classList.toggle('is-big', !!(state && state.key === 'big'));
+                        overlay.classList.toggle('is-small', !!(state && state.key === 'small'));
+                        overlay.setAttribute('aria-hidden', show ? 'false' : 'true');
+                        if (!show || !state) {
+                            overlay.classList.remove('is-overdue');
+                            return;
+                        }
+                        const hideBtn = document.getElementById('betWaitHideBtn');
+                        if (hideBtn && !hideBtn.dataset.bound) {
+                            hideBtn.dataset.bound = '1';
+                            hideBtn.addEventListener('click', function () {
+                                const s = betWaitSyncState();
+                                if (s) betWaitHiddenKey = s.waitKey || betWaitKey(s.issue, s.bit, s.count, s.oid);
+                                try { betWaitRender(); } catch (e) {}
+                            });
+                        }
+                        const now = Date.now();
+                        const deadlineMs = Number(state.deadlineMs) || 0;
+                        const remainMs = deadlineMs ? Math.max(0, deadlineMs - now) : 0;
+                        const seconds = deadlineMs ? Math.ceil(remainMs / 1000) : 0;
+                        const overdue = !!(!remainMs && ((deadlineMs && now - deadlineMs > 12000)
+                            || (!deadlineMs && now - (Number(state.placedAt) || now) > 75000)));
+                        overlay.classList.toggle('is-overdue', overdue);
+                        const titleEl = document.getElementById('betWaitTitle');
+                        const secondsEl = document.getElementById('betWaitSeconds');
+                        const detailEl = document.getElementById('betWaitDetail');
+                        const clockEl = document.getElementById('betWaitClock');
+                        const amountText = state.count ? (' · ' + state.count + 'K') : '';
+                        const sending = !!(!pending && (betPlacing || state.phase === 'placing'));
+                        const title = (sending ? 'ĐANG ĐẶT ' : 'ĐÃ ĐẶT ')
+                            + (state.label || (state.bit ? 'LỚN' : 'NHỎ')) + amountText;
+                        if (titleEl && titleEl.textContent !== title) titleEl.textContent = title;
+                        const secondsText = deadlineMs ? String(seconds) : '--';
+                        if (secondsEl && secondsEl.textContent !== secondsText) secondsEl.textContent = secondsText;
+                        const issueText = state.issue ? ('Kỳ ' + gtxShortIssue(state.issue)) : 'Đang xác nhận kỳ';
+                        const detail = remainMs > 0
+                            ? (issueText + ' · Còn ' + seconds + 's đến giờ mở kết quả')
+                            : (issueText + ' · Đã hết giờ, đang chờ kết quả…');
+                        if (detailEl && detailEl.textContent !== detail) detailEl.textContent = detail;
+                        if (clockEl) {
+                            let progress = 0;
+                            if (deadlineMs && Number(state.durationMs) > 0) {
+                                progress = Math.max(0, Math.min(1, remainMs / Number(state.durationMs)));
+                            }
+                            clockEl.style.setProperty('--wait-progress', String(progress));
+                        }
+                        overlay.setAttribute('data-wait-key', stateKey);
+                        overlay.setAttribute('data-wait-seconds', String(seconds));
                     }
                     function betManualSuggestedBlinkPaused() {
                         // Dung nhay ngay khi dang gui lenh, trong luc cho ket qua
@@ -5636,6 +5950,7 @@ body {
                             count: Number(w && w.count) || 0,
                             total: Number(w && w.total) || 0,
                             placedAt: Number(w && w.placedAt) || Date.now(),
+                            deadlineMs: Number(w && w.deadlineMs) || 0,
                             acct: String((w && w.acct) || betManualAccountKey())
                         };
                         if (!item.issue) return false;
@@ -5984,6 +6299,7 @@ body {
                             return;
                         }
                         const expectedIssue = betIssue || '';
+                        try { betWaitBeginFromSelection(expectedIssue, betDeadlineMs); } catch (e) {}
                         try { betStopSideBlinkNow(); } catch (e) {}
                         try { betRender(); } catch (e) {}
                         betSetStatus('Đang đặt ' + betSel.label + ' · ' + gtxFmtMoney(betTotal()) + '…');
@@ -5993,15 +6309,18 @@ body {
                                 p.then(function (res) {
                                     if (!res || !res.ok) {
                                         betSideBlinkStopped = false;
+                                        try { betWaitClearIfIdle(); } catch (e) {}
                                         try { betRender(); } catch (e) {}
                                     }
                                 }).catch(function () {
                                     betSideBlinkStopped = false;
+                                    try { betWaitClearIfIdle(); } catch (e) {}
                                     try { betRender(); } catch (e) {}
                                 });
                             }
                         } catch (e) {
                             betSideBlinkStopped = false;
+                            try { betWaitClearIfIdle(); } catch (e2) {}
                             try { betRender(); } catch (e2) {}
                         }
                     }
@@ -6119,12 +6438,15 @@ body {
                         try { betSyncBettingClosedControls(); } catch (e) {}
                         betRenderPlaceButton();
                         betRenderAutoButton();
+                        try { betWaitRender(); } catch (e) {}
                     }
                     function betRender() {
                         const panel = document.getElementById('betPlacePanel');
                         if (!panel) return;
                         const choices = panel.querySelectorAll('[data-bet-key]');
                         const guide = betSyncPatternGuide(false);
+                        const waitState = betWaitSyncState();
+                        const waitSideKey = waitState ? String(waitState.key || '') : '';
                         if (guide.ready && betSel && betSel.key !== guide.key && !betPlacing && !betAuto.active && !betAuto.starting) {
                             betSel = null;
                         }
@@ -6132,14 +6454,16 @@ body {
                         for (let i = 0; i < choices.length; i++) {
                             const choiceKey = choices[i].getAttribute('data-bet-key');
                             const selected = !!betSel && choiceKey === betSel.key;
+                            const placed = !!waitSideKey && choiceKey === waitSideKey;
                             const recommended = !!(guide.ready && choiceKey === guide.key);
                             const locked = !!(guide.ready && !recommended);
-                            const confirmed = !!selected;
-                            const confirmedLocked = !!(confirmed && recommended);
-                            const sideBlinking = !!(recommended && !selected && !sideBlinkPaused && !locked);
-                            const sidePaused = !!(recommended && !selected && sideBlinkPaused && !locked);
+                            const confirmed = !!(selected || placed);
+                            const confirmedLocked = !!(confirmed && (recommended || placed));
+                            const sideBlinking = !!(recommended && !confirmed && !sideBlinkPaused && !locked);
+                            const sidePaused = !!(recommended && !confirmed && sideBlinkPaused && !locked);
                             choices[i].classList.toggle('sel', selected);
                             choices[i].classList.toggle('bet-side-guide', recommended);
+                            choices[i].classList.toggle('bet-side-placed', placed);
                             choices[i].classList.toggle('bet-side-confirmed', confirmed);
                             choices[i].classList.toggle('bet-side-blinking', sideBlinking);
                             choices[i].classList.toggle('bet-side-paused', sidePaused);
@@ -6149,6 +6473,7 @@ body {
                             choices[i].setAttribute('aria-pressed', selected ? 'true' : 'false');
                             choices[i].setAttribute('aria-disabled', (locked || confirmedLocked) ? 'true' : 'false');
                             choices[i].setAttribute('data-side-guide', recommended ? '1' : '0');
+                            choices[i].setAttribute('data-side-placed', placed ? '1' : '0');
                             choices[i].setAttribute('data-side-confirmed', confirmed ? '1' : '0');
                             choices[i].setAttribute('data-side-confirmed-locked', confirmedLocked ? '1' : '0');
                             choices[i].setAttribute('data-side-locked', locked ? '1' : '0');
@@ -6159,6 +6484,9 @@ body {
                             if (locked) {
                                 choices[i].title = '🔒 Đang khóa · ô ' + (guide.index + 1) + '/7 là '
                                     + guide.bit + ' · chỉ chọn được ' + guide.label;
+                            } else if (placed && !selected) {
+                                choices[i].title = 'Đã đặt ' + (waitState.label || choices[i].textContent.trim())
+                                    + ' · nút vẫn mờ nhẹ và khóa cho đến khi có kết quả';
                             } else if (selected) {
                                 choices[i].title = 'Đã chọn ' + betSel.label
                                     + ' · nút đã mờ nhẹ nhưng vẫn sáng · chạm mức tiền đang nhấp nháy';
@@ -7419,6 +7747,10 @@ body {
                             } else if (auto && (!betAutoCurrent(opts.sessionId) || Date.now() >= betAuto.deadlineMs || betAutoIsResting())) {
                                 throw betError(betAutoIsResting() ? 'Đã tới giờ nghỉ' : 'Đã dừng tự động', 'cancelled');
                             }
+                            const confirmedDeadlineMs = Number(betDeadlineMs) || 0;
+                            if (!auto) {
+                                try { betWaitBeginFromSelection(confirmedIssue, confirmedDeadlineMs); } catch (e) {}
+                            }
                             const payload = {
                                 typeId: CFG.payload.typeId,
                                 issuenumber: betIssue,
@@ -7451,6 +7783,7 @@ body {
                                         count: Number(betCount),
                                         total: total,
                                         placedAt: Date.now(),
+                                        deadlineMs: confirmedDeadlineMs,
                                         acct: betManualAccountKey()
                                     });
                                 } catch (e) {}
@@ -7489,6 +7822,9 @@ body {
                             return { ok: false, error: e };
                         } finally {
                             betPlacing = false;
+                            if (!auto) {
+                                try { betWaitClearIfIdle(); } catch (e) {}
+                            }
                             betRender();
                         }
                     }
@@ -11248,4 +11584,4 @@ body {
                         });
                 </script>
    
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4c54bc6ad04c5e8',t:'MTc5MjMwMjk0Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4d8a7ea18b8855d',t:'MTc5MjUwNTk0OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4df665d7cc4cd2f',t:'MTc5MjU3NjY2NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4c54bc6ad04c5e8',t:'MTc5MjMwMjk0Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4d8a7ea18b8855d',t:'MTc5MjUwNTk0OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4df86207c56166a',t:'MTc5MjU3Nzk2Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
