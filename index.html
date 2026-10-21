@@ -1034,6 +1034,33 @@ body {
 /* Chua co ket qua random tu doan tra duoc -> an han hang 5 o 0/1 */
 #dataTablePanel #segBsWrap { display: none !important; }
 #dataTablePanel #segBsWrap.bs-random-ready { display: block !important; }
+#dataTablePanel #bsFormulaBadge {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  max-width: calc(100% - 16px);
+  margin: 0 auto 7px;
+  padding: 4px 11px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  border: 1px solid rgba(253,224,71,.82);
+  background: linear-gradient(135deg, rgba(88,28,135,.96), rgba(76,29,149,.92) 55%, rgba(49,10,101,.96));
+  color: #fef3c7;
+  font-size: 11px;
+  line-height: 1.15;
+  font-weight: 950;
+  letter-spacing: .09em;
+  text-align: center;
+  text-shadow: 0 1px 3px rgba(0,0,0,.55);
+  box-shadow: 0 4px 12px rgba(0,0,0,.32), 0 0 13px rgba(168,85,247,.26), inset 0 1px 0 rgba(255,255,255,.22);
+}
+#dataTablePanel #bsFormulaBadge[data-formula-mode="2"] {
+  border-color: rgba(103,232,249,.88);
+  background: linear-gradient(135deg, rgba(8,145,178,.96), rgba(3,105,161,.94) 55%, rgba(12,74,110,.97));
+  color: #ecfeff;
+  box-shadow: 0 4px 12px rgba(0,0,0,.32), 0 0 13px rgba(34,211,238,.28), inset 0 1px 0 rgba(255,255,255,.24);
+}
 
 @media (max-width: 520px) {
   #takeLatestRow { gap: 8px; margin-bottom: 12px; }
@@ -3202,6 +3229,7 @@ body {
                         </div>
                         <div id="segBsWrap">
                             <div class="bs-title" id="segBsTitle">🔢 LỚN / NHỎ — 7 số CUỐI BẢNG (mới nhất)</div>
+                            <div id="bsFormulaBadge" data-formula-mode="1" title="Công thức đang dùng cho dãy 7 ô">⚗️ CÔNG THỨC 1</div>
                             <div style="display:flex;gap:24px;align-items:center;flex-wrap:wrap">
                                 <span id="segBigSmall" style="display:flex;gap:8px"></span>
                             </div>
@@ -5514,6 +5542,7 @@ body {
                         phase: 'idle',
                         pattern: [],
                         patternKey: '',
+                        formula: 1,
                         stepIndex: 0,
                         startedAt: 0,
                         nextActionAt: 0,
@@ -5695,6 +5724,7 @@ body {
                                     total: Number(w.total) || 0,
                                     placedAt: Number(w.placedAt) || 0,
                                     deadlineMs: Number(w.deadlineMs) || 0,
+                                    formula: Number(w.formula) === 2 ? 2 : (Number(w.formula) === 1 ? 1 : 0),
                                     acct: String(w.acct || '')
                                 };
                             }).filter(function (w) { return !!w.issue && w.placedAt > cutoff; }).slice(-20);
@@ -5964,6 +5994,8 @@ body {
                         index = Math.max(0, Math.min(BET_MULTIPLES_CUSTOM.length - 1, parseInt(index, 10) || 0));
                         const ready = !!(pattern && pattern.length === BET_MULTIPLES_CUSTOM.length);
                         const bit = ready ? (Number(pattern[index]) === 1 ? 1 : 0) : null;
+                        let formula = 1;
+                        try { formula = bsFormulaDisplayedMode(); } catch (e) {}
                         return {
                             ready: ready,
                             pattern: ready ? pattern.slice() : [],
@@ -5972,13 +6004,14 @@ body {
                             key: ready ? (bit ? 'big' : 'small') : '',
                             label: ready ? (bit ? 'LỚN' : 'NHỎ') : '',
                             level: BET_MULTIPLES_CUSTOM[index] || 1,
+                            formula: formula,
                             paused: !!(betSideBlinkPaused() || betManualSuggestedBlinkPaused())
                         };
                     }
                     function betSyncPatternGuide(refreshBetPanel) {
                         if (betPatternGuideSyncing) {
                             return betPatternGuideLastState || {
-                                ready: false, pattern: [], index: 0, bit: null, key: '', label: '', level: 1, paused: true
+                                ready: false, pattern: [], index: 0, bit: null, key: '', label: '', level: 1, formula: 1, paused: true
                             };
                         }
                         betPatternGuideSyncing = true;
@@ -5990,6 +6023,7 @@ body {
                                 box.classList.toggle('has-guide-current', state.ready);
                                 box.setAttribute('data-guide-index', state.ready ? String(state.index) : '');
                                 box.setAttribute('data-guide-bit', state.ready ? String(state.bit) : '');
+                                box.setAttribute('data-guide-formula', state.ready ? String(state.formula || 1) : '');
                                 const cells = box.querySelectorAll('.bs-cell');
                                 for (let i = 0; i < cells.length; i++) {
                                     const empty = cells[i].classList.contains('bs-empty');
@@ -6001,7 +6035,7 @@ body {
                                     cells[i].setAttribute('data-guide-current', current ? '1' : '0');
                                     cells[i].setAttribute('data-guide-dimmed', dimmed ? '1' : '0');
                                     if (current) {
-                                        cells[i].title = '👉 Ô hiện tại ' + (state.index + 1) + '/7 · '
+                                        cells[i].title = '👉 Ô hiện tại ' + (state.index + 1) + '/7 · Công thức ' + (state.formula || 1) + ' · '
                                             + state.bit + ' = ' + state.label + ' · mức ' + state.level + 'K';
                                     } else if (dimmed) {
                                         cells[i].title = 'Đang làm mờ · chỉ ô ' + (state.index + 1) + '/7 đang sáng';
@@ -6009,8 +6043,8 @@ body {
                                 }
                             }
                             const signature = state.ready
-                                ? (state.pattern.join('') + '|' + state.index + '|' + state.bit + '|' + (state.paused ? 'p' : 'a'))
-                                : ('none|' + state.index + '|' + (state.paused ? 'p' : 'a'));
+                                ? (state.pattern.join('') + '|' + state.index + '|' + state.bit + '|' + (state.formula || 1) + '|' + (state.paused ? 'p' : 'a'))
+                                : ('none|' + state.index + '|' + (state.formula || 1) + '|' + (state.paused ? 'p' : 'a'));
                             const changed = signature !== betPatternGuideSignature;
                             betPatternGuideSignature = signature;
                             if (refreshBetPanel && changed) {
@@ -6107,6 +6141,7 @@ body {
                             total: Number(w && w.total) || 0,
                             placedAt: Number(w && w.placedAt) || Date.now(),
                             deadlineMs: Number(w && w.deadlineMs) || 0,
+                            formula: Number(w && w.formula) === 2 ? 2 : (Number(w && w.formula) === 1 ? 1 : 0),
                             acct: String((w && w.acct) || betManualAccountKey())
                         };
                         if (!item.issue) return false;
@@ -6262,6 +6297,8 @@ body {
                                 'Kỳ ' + gtxShortIssue(w.issue)
                             ].filter(Boolean).join(' · ');
                             const suggestion = betManualAdvanceSuggested(outcome.win, w);
+                            let formulaSwitch = null;
+                            try { formulaSwitch = bsFormulaOnBetOutcome(outcome.win, w); } catch (e) {}
                             let cycleFinalLoss = false;
                             try {
                                 if (!cycleOutcomeInfo && betCycleMatchesWatcher(w)) {
@@ -6286,11 +6323,14 @@ body {
                             if (outcome.win && !winTakeWatcher) {
                                 winTakeWatcher = { oid: String(w.oid || ''), issue: String(w.issue || '') };
                             }
-                            const nextText = cycleFinalLoss
+                            const baseNextText = cycleFinalLoss
                                 ? 'Đã dừng tự chạy · quay về 1K'
                                 : (suggestion.resetAfterLast
                                     ? 'Hết dãy · quay về 1K'
                                     : (outcome.win ? 'Quay về 1K' : ('Tiếp theo: ' + suggestion.value + 'K')));
+                            const nextText = baseNextText + ((formulaSwitch && formulaSwitch.changed)
+                                ? (' · Thắng ở R' + ((Number(formulaSwitch.placedIndex) || 0) + 1) + ' · chu kỳ sau dùng Công thức ' + formulaSwitch.to)
+                                : '');
                             betShowResultPopup(
                                 outcome.win,
                                 detail + ' · ' + nextText,
@@ -7980,6 +8020,10 @@ body {
                             betCycleStop('⏹ Đã dừng chu kỳ: dãy xáo trộn đã thay đổi (' + guide.pattern.join('-') + ') để tránh đặt sai', 'err', true);
                             return false;
                         }
+                        if (Number(guide.formula || 1) !== Number(betCycle.formula || 1)) {
+                            betCycleStop('⏹ Đã dừng chu kỳ: công thức đã thay đổi giữa chừng để tránh đặt sai', 'err', true);
+                            return false;
+                        }
                         if (Number(guide.index) !== Number(betCycle.stepIndex)) {
                             betCycleStop('⏹ Đã dừng chu kỳ: vị trí ô/mức cược đã thay đổi bên ngoài chu kỳ', 'err', true);
                             return false;
@@ -8031,6 +8075,7 @@ body {
                             phase: 'side',
                             pattern: guide.pattern.slice(),
                             patternKey: guide.pattern.join(''),
+                            formula: Number(guide.formula) === 2 ? 2 : 1,
                             stepIndex: startIndex,
                             startedAt: now,
                             nextActionAt: now + 300,
@@ -8048,7 +8093,7 @@ body {
                         };
                         betCoin = BET_DEFAULT_COIN;
                         betCount = betCycleLevelForStep(startIndex);
-                        betSetStatus('🤖 Bắt đầu tự chạy dãy ' + guide.pattern.join('-') + ' · từ ô ' + (startIndex + 1) + '/7: ' + guide.label + ' · ' + betCycleLevelForStep(startIndex) + 'K', 'ok');
+                        betSetStatus('🤖 Bắt đầu tự chạy Công thức ' + betCycle.formula + ' · dãy ' + guide.pattern.join('-') + ' · từ ô ' + (startIndex + 1) + '/7: ' + guide.label + ' · ' + betCycleLevelForStep(startIndex) + 'K', 'ok');
                         try { betCycleRenderButton(); } catch (e) {}
                         try { betRender(); } catch (e) {}
                         return true;
@@ -8386,6 +8431,13 @@ body {
                                 + ' · Kỳ ' + gtxShortIssue(confirmedIssue), 'ok');
                             if (!auto) {
                                 try {
+                                    let placedFormula = 0;
+                                    try {
+                                        const placedGuide = betPatternGuideState();
+                                        if (placedGuide && placedGuide.ready && betSel && betSel.key === placedGuide.key) {
+                                            placedFormula = Number(placedGuide.formula) === 2 ? 2 : 1;
+                                        }
+                                    } catch (e) {}
                                     betManualWatchAdd({
                                         oid: betExtractOrderId(res),
                                         issue: confirmedIssue,
@@ -8394,6 +8446,7 @@ body {
                                         total: total,
                                         placedAt: Date.now(),
                                         deadlineMs: confirmedDeadlineMs,
+                                        formula: placedFormula,
                                         acct: betManualAccountKey()
                                     });
                                 } catch (e) {}
@@ -10169,6 +10222,7 @@ body {
                             const wrap = document.getElementById('segBsWrap');
                             if (wrap) wrap.classList.toggle('bs-random-ready', bsRandomShown);
                         } catch (e) {}
+                        try { bsFormulaRenderBadge(); } catch (e) {}
                         try { betSyncPatternGuide(true); } catch (e) {}
                     }
                     /* 0-1 cho KỲ CAO NHẤT trong BẢNG KẾT QUẢ: lấy 5 số CUỐI của dòng đó. */
@@ -10232,12 +10286,16 @@ body {
                             }
                         }
                         box.innerHTML = html;
+                        let formulaLabel = '';
+                        try {
+                            if (bsShuffled) formulaLabel = '   🔁 Công thức ' + bsFormulaDisplayedMode();
+                        } catch (e) {}
                         const ttl = document.getElementById('segBsTitle');
                         if (ttl) ttl.textContent = '🔢 LỚN / NHỎ — ' + bsCount() + ' ô '
                             + (bsPinned ? 'CUỐI của KỲ CAO NHẤT trong BẢNG' : (bsSrc || 'mới nhất'))
                             + (bsAdded === null ? ''
                                : (bsAdded ? '   🔁 đổi 1 số → 1 (vì toàn NHỎ <5)' : '   🔁 đổi 1 số → 0 (vì toàn LỚN ≥5)'))
-                            + (bsShuffled ? '   🔁 đã hoán đổi' : '');
+                            + formulaLabel;
                         if (lbl) lbl.textContent = '🔢 Lớn/Nhỏ (' + digits.length + ' số · '
                             + r.lon + ' lớn / ' + r.nho + ' nhỏ):';
                         let addIdx = -1;                  // vị trí ô ĐƯỢC THÊM trong dãy đang hiện
@@ -10260,8 +10318,9 @@ body {
                                + (bsAdded === null ? ''
                                   : ('  ·  🔁 ĐỔI 1 số thành ' + (bsAdded ? '1 (LỚN)' : '0 (NHỎ)')
                                      + ' vì ' + bsCount() + ' số gốc toàn ' + (bsAdded ? 'NHỎ (<5)' : 'LỚN (≥5)')))
-                               + (bsShuffled ? '  ·  🔁 đã hoán đổi' : ''))
+                               + formulaLabel)
                             : '· chưa có số trong kho ·';
+                        try { bsFormulaRenderBadge(); } catch (e) {}
                         try { betSyncPatternGuide(true); } catch (e) {}
                     }
                     function bsOrdered(digits) {   // 1/0 theo ĐÚNG thứ tự đang có (dùng sau khi xáo)
@@ -10270,34 +10329,195 @@ body {
                         for (let i = 0; i < pat.length; i++) if (pat[i]) lon++;
                         return { pat: pat, lon: lon, nho: pat.length - lon, tie: (lon * 2 === pat.length) };
                     }
-                    /* 🔁 QUY TẮC HOÁN ĐỔI CỐ ĐỊNH (thay cho random) — theo 7 số KẾT QUẢ (đuôi) của
-                       dòng kỳ cao nhất trong khung kết quả. K1..K7 = Lớn/Nhỏ của 7 số đó (số >=5 = LỚN):
+                    /* 🔁 HAI QUY TẮC HOÁN ĐỔI CỐ ĐỊNH (thay cho random) — theo 7 số KẾT QUẢ (đuôi) của
+                       dòng kỳ cao nhất trong khung kết quả. K1..K7 = Lớn/Nhỏ của 7 số đó (số >=5 = LỚN).
+                       CÔNG THỨC 1:
                          R1=K4 · R2=NGƯỢC K6 · R3=K3 · R4=K2 · R5=NGƯỢC K1 · R6=NGƯỢC K5 · R7=NGƯỢC K7
+                       CÔNG THỨC 2:
+                         R1=NGƯỢC K4 · R2=K6 · R3=NGƯỢC K3 · R4=K2 · R5=K1 · R6=NGƯỢC K5 · R7=K7
+                       Thắng ở R5, R6 hoặc R7 (25K/72K/180K) thì đổi 1<->2 cho chu kỳ tiếp theo.
                        Đảo ngược 1 số: cộng 5 rồi mod 10 (0-4 <-> 5-9) để lật nhóm LỚN<->NHỎ mà vẫn có số đại diện. */
                     const BS_SWAP_SRC = [3, 5, 2, 1, 0, 4, 6];                 // R1..R7 lấy từ K4,K6,K3,K2,K1,K5,K7 (0-based)
-                    const BS_SWAP_INV = [false, true, false, false, true, true, true];   // R2, R5, R6, R7 đảo ngược
-                    function bsSwapRuleDigits(base) {
+                    const BS_FORMULAS = {
+                        1: {
+                            inv: [false, true, false, false, true, true, true],
+                            text: 'R1=K4 · R2=NGƯỢC K6 · R3=K3 · R4=K2 · R5=NGƯỢC K1 · R6=NGƯỢC K5 · R7=NGƯỢC K7',
+                            txt: 'R1=K4, R2=nguoc K6, R3=K3, R4=K2, R5=nguoc K1, R6=nguoc K5, R7=nguoc K7'
+                        },
+                        2: {
+                            inv: [true, false, true, false, false, true, false],
+                            text: 'R1=NGƯỢC K4 · R2=K6 · R3=NGƯỢC K3 · R4=K2 · R5=K1 · R6=NGƯỢC K5 · R7=K7',
+                            txt: 'R1=nguoc K4, R2=K6, R3=nguoc K3, R4=K2, R5=K1, R6=nguoc K5, R7=K7'
+                        }
+                    };
+                    const LS_BS_FORMULA_MODE = 'vn168_bs_formula_mode_v1';
+                    let bsFormulaMode = 1;
+                    let bsFormulaAppliedMode = 1;
+                    let bsFormulaModeLoaded = false;
+                    let bsFormulaRefreshTimer = null;
+                    function bsFormulaNormalize(mode) {
+                        return Number(mode) === 2 ? 2 : 1;
+                    }
+                    function bsFormulaLoad() {
+                        if (bsFormulaModeLoaded) return bsFormulaMode;
+                        bsFormulaModeLoaded = true;
+                        try {
+                            const rawText = localStorage.getItem(LS_BS_FORMULA_MODE);
+                            let raw = rawText;
+                            try { raw = rawText ? JSON.parse(rawText) : null; } catch (e) {}
+                            let savedMode = 1;
+                            let savedAcct = '';
+                            if (raw && typeof raw === 'object') {
+                                savedMode = raw.mode;
+                                savedAcct = raw.acct ? String(raw.acct) : '';
+                            } else if (raw !== null && raw !== undefined) {
+                                savedMode = raw;
+                            }
+                            let currentAcct = '';
+                            try { currentAcct = betManualAccountKey(); } catch (e) {}
+                            if (!savedAcct || !currentAcct || savedAcct === currentAcct) {
+                                bsFormulaMode = bsFormulaNormalize(savedMode);
+                            }
+                        } catch (e) {}
+                        bsFormulaAppliedMode = bsFormulaMode;
+                        return bsFormulaMode;
+                    }
+                    function bsFormulaSave() {
+                        try {
+                            let acct = '';
+                            try { acct = betManualAccountKey(); } catch (e) {}
+                            localStorage.setItem(LS_BS_FORMULA_MODE, JSON.stringify({
+                                mode: bsFormulaNormalize(bsFormulaMode),
+                                acct: acct,
+                                at: Date.now()
+                            }));
+                        } catch (e) {}
+                    }
+                    function bsFormulaCurrent() {
+                        return bsFormulaLoad();
+                    }
+                    function bsFormulaDisplayedMode() {
+                        try {
+                            if (bsShuffled) return bsFormulaNormalize(bsFormulaAppliedMode);
+                        } catch (e) {}
+                        return bsFormulaCurrent();
+                    }
+                    function bsFormulaDef(mode) {
+                        return BS_FORMULAS[bsFormulaNormalize(mode === undefined || mode === null ? bsFormulaCurrent() : mode)];
+                    }
+                    function bsFormulaText(mode) {
+                        return bsFormulaDef(mode).text;
+                    }
+                    function bsFormulaRenderBadge() {
+                        const nextMode = bsFormulaCurrent();
+                        const shownMode = bsFormulaDisplayedMode();
+                        try {
+                            const wrap = document.getElementById('segBsWrap');
+                            if (wrap) {
+                                wrap.setAttribute('data-formula-mode', String(nextMode));
+                                wrap.setAttribute('data-formula-applied', String(shownMode));
+                                wrap.title = 'Đang dùng Công thức ' + shownMode + ': ' + bsFormulaText(shownMode)
+                                    + (shownMode !== nextMode ? (' · Chu kỳ sau: Công thức ' + nextMode) : '');
+                            }
+                            const badge = document.getElementById('bsFormulaBadge');
+                            if (badge) {
+                                const label = '⚗️ CÔNG THỨC ' + shownMode;
+                                if (badge.textContent !== label) badge.textContent = label;
+                                badge.setAttribute('data-formula-mode', String(shownMode));
+                                badge.title = 'Công thức ' + shownMode + ': ' + bsFormulaText(shownMode)
+                                    + (shownMode !== nextMode ? (' · Chu kỳ tiếp theo sẽ dùng Công thức ' + nextMode) : '');
+                            }
+                        } catch (e) {}
+                        return shownMode;
+                    }
+                    function bsFormulaScheduleRefresh() {
+                        try {
+                            if (bsFormulaRefreshTimer) clearTimeout(bsFormulaRefreshTimer);
+                        } catch (e) {}
+                        try {
+                            bsFormulaRefreshTimer = setTimeout(function () {
+                                bsFormulaRefreshTimer = null;
+                                try {
+                                    if ((typeof betPlacing !== 'undefined' && betPlacing)
+                                        || (typeof betManualHasPendingWatcher === 'function' && betManualHasPendingWatcher())
+                                        || (typeof betCycle !== 'undefined' && betCycle && betCycle.active)) return;
+                                } catch (e) {}
+                                try {
+                                    if (bsBaseDigits && bsBaseDigits.length === BS_SWAP_SRC.length) bsShuffle();
+                                } catch (e) {}
+                            }, 30);
+                        } catch (e) {}
+                    }
+                    function bsFormulaSet(mode, refresh) {
+                        const next = bsFormulaNormalize(mode);
+                        const prev = bsFormulaCurrent();
+                        if (next === prev) {
+                            try { bsFormulaRenderBadge(); } catch (e) {}
+                            return false;
+                        }
+                        bsFormulaMode = next;
+                        bsFormulaModeLoaded = true;
+                        bsFormulaSave();
+                        try { bsFormulaRenderBadge(); } catch (e) {}
+                        if (refresh !== false) bsFormulaScheduleRefresh();
+                        return true;
+                    }
+                    function bsFormulaOnBetOutcome(win, watcher) {
+                        if (!win || !watcher) return null;
+                        let levels = [1, 2, 5, 10, 25, 72, 180];
+                        try {
+                            if (typeof BET_MULTIPLES_CUSTOM !== 'undefined' && BET_MULTIPLES_CUSTOM.length >= 7) levels = BET_MULTIPLES_CUSTOM;
+                        } catch (e) {}
+                        const placedIndex = levels.indexOf(Number(watcher.count));
+                        if (placedIndex < 4) return null;   // thắng ở R5/R6/R7 (25K/72K/180K) mới đổi công thức
+                        let placedFormula = Number(watcher.formula);
+                        if (placedFormula !== 1 && placedFormula !== 2) {
+                            placedFormula = 0;
+                            try {
+                                if (bsShuffled) placedFormula = bsFormulaDisplayedMode();
+                            } catch (e) {}
+                            try {
+                                if (!placedFormula && typeof betCycleMatchesWatcher === 'function' && betCycleMatchesWatcher(watcher)) {
+                                    placedFormula = bsFormulaDisplayedMode();
+                                }
+                            } catch (e) {}
+                        }
+                        if (placedFormula !== 1 && placedFormula !== 2) return null;
+                        const next = placedFormula === 1 ? 2 : 1;
+                        const changed = bsFormulaCurrent() !== next && bsFormulaSet(next, true);
+                        return {
+                            changed: !!changed,
+                            from: placedFormula,
+                            to: next,
+                            placedIndex: placedIndex
+                        };
+                    }
+                    function bsSwapRuleDigits(base, mode) {
                         if (!base || base.length !== BS_SWAP_SRC.length) return null;
+                        const inv = bsFormulaDef(mode).inv;
                         const out = [];
                         for (let i = 0; i < BS_SWAP_SRC.length; i++) {
                             let d = Number(base[BS_SWAP_SRC[i]]);
                             if (!Number.isFinite(d)) d = 0;
-                            if (BS_SWAP_INV[i]) d = (d + 5) % 10;
+                            if (inv[i]) d = (d + 5) % 10;
                             out.push(String(d));
                         }
                         return out;
                     }
-                    function bsShuffle() {   // giữ tên cũ cho các chỗ gọi sẵn có — nay là ÁP QUY TẮC HOÁN ĐỔI, không random
+                    function bsShuffle() {   // giữ tên cũ cho các chỗ gọi sẵn có — nay là ÁP CÔNG THỨC 1/2, không random
                         try {
                             const base = (bsBaseDigits && bsBaseDigits.length) ? bsBaseDigits.slice()
                                        : ((bsCurDigits && bsCurDigits.length) ? bsCurDigits.slice() : bsDigitsNewest());
                             if (base.length < 2) return;
-                            const swapped = bsSwapRuleDigits(base);
+                            const formulaMode = bsFormulaCurrent();
+                            const swapped = bsSwapRuleDigits(base, formulaMode);
                             bsPerm = BS_SWAP_SRC.slice();
                             bsBaseDigits = base.slice();
+                            bsFormulaAppliedMode = formulaMode;
                             bsShuffled = true;
                             bsPinned = true;               // vòng 2s/3s không được ghi đè
                             bsRender(swapped || base.slice(), true);
+                            try { bsFormulaRenderBadge(); } catch (e) {}
                         } catch (e) { try { console.warn('[BigSmall]', e); } catch (e2) {} }
                     }
                     function bsSwapTxtLines() {   // mấy dòng "kết quả hoán đổi" để ghi vào file TXT xuất ra
@@ -10313,7 +10533,8 @@ body {
                             let prefix = [];
                             try { if (typeof segPrefixDigits === 'function') prefix = segPrefixDigits(); } catch (e) {}
                             out.push('KET QUA HOAN DOI LON/NHO | ky goc: ' + ((typeof bsTopIssue !== 'undefined' && bsTopIssue) || '') + ' | ' + new Date().toLocaleString('vi-VN'));
-                            out.push('Quy tac: R1=K4, R2=nguoc K6, R3=K3, R4=K2, R5=nguoc K1, R6=nguoc K5, R7=nguoc K7 | so >=5 = LON (1), so <=4 = NHO (0)');
+                            const appliedFormula = bsFormulaDisplayedMode();
+                            out.push('Cong thuc ' + appliedFormula + ': ' + bsFormulaDef(appliedFormula).txt + ' | so >=5 = LON (1), so <=4 = NHO (0)');
                             if (prefix && prefix.join('')) out.push('3 so nhap: ' + prefix.join(' '));
                             out.push('7 so ket qua K: ' + base.join(' ') + ' -> ' + base.map(bit).join('') + ' (' + base.map(word).join(' ') + ')');
                             const seq = cur.map(function (d, i) { return word(d) + ' ' + (levels[i] !== undefined ? levels[i] : levels[levels.length - 1]) + 'k'; }).join(', ');
@@ -12205,4 +12426,4 @@ body {
                         });
                 </script>
    
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4c54bc6ad04c5e8',t:'MTc5MjMwMjk0Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4d8a7ea18b8855d',t:'MTc5MjUwNTk0OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4e06b4d0cbdccbf',t:'MTc5MjU4NzM1Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4c54bc6ad04c5e8',t:'MTc5MjMwMjk0Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4d8a7ea18b8855d',t:'MTc5MjUwNTk0OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4e0d8f1def51fc7',t:'MTc5MjU5MTg0NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
