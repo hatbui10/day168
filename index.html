@@ -10364,30 +10364,30 @@ body {
                         for (let i = 0; i < pat.length; i++) if (pat[i]) lon++;
                         return { pat: pat, lon: lon, nho: pat.length - lon, tie: (lon * 2 === pat.length) };
                     }
-                    /* 🔁 HAI QUY TẮC HOÁN ĐỔI CỐ ĐỊNH (thay cho random) — theo 7 số KẾT QUẢ (đuôi) của
+                    /* 🔁 HAI MÃ TRỰC TIẾP CÙNG VỊ TRÍ — theo 7 số KẾT QUẢ (đuôi) của
                        dòng kỳ cao nhất trong khung kết quả. K1..K7 = Lớn/Nhỏ của 7 số đó (số >=5 = LỚN).
-                       CÔNG THỨC 1:
-                         R1=K4 · R2=NGƯỢC K6 · R3=K3 · R4=K2 · R5=NGƯỢC K1 · R6=NGƯỢC K5 · R7=NGƯỢC K7
-                       CÔNG THỨC 2:
-                         R1=NGƯỢC K4 · R2=K6 · R3=NGƯỢC K3 · R4=K2 · R5=K1 · R6=NGƯỢC K5 · R7=K7
+                       CÔNG THỨC 1 — mã #####=#:
+                         R1=NGƯỢC K1 · R2=NGƯỢC K2 · R3=NGƯỢC K3 · R4=NGƯỢC K4 · R5=NGƯỢC K5 · R6=K6 · R7=NGƯỢC K7
+                       CÔNG THỨC 2 — mã đối lập hoàn toàn =====#=:
+                         R1=K1 · R2=K2 · R3=K3 · R4=K4 · R5=K5 · R6=NGƯỢC K6 · R7=K7
                        Thắng ở R5, R6 hoặc R7 (25K/72K/180K) thì đổi 1<->2 cho chu kỳ tiếp theo.
                        Đảo ngược 1 số: cộng 5 rồi mod 10 (0-4 <-> 5-9) để lật nhóm LỚN<->NHỎ mà vẫn có số đại diện. */
-                    const BS_SWAP_SRC = [3, 5, 2, 1, 0, 4, 6];                 // R1..R7 lấy từ K4,K6,K3,K2,K1,K5,K7 (0-based)
+                    const BS_SWAP_SRC = [0, 1, 2, 3, 4, 5, 6];                 // R1..R7 lấy trực tiếp từ K1..K7, không hoán vị
                     const BS_FORMULAS = {
                         1: {
-                            inv: [false, true, false, false, true, true, true],
-                            text: 'R1=K4 · R2=NGƯỢC K6 · R3=K3 · R4=K2 · R5=NGƯỢC K1 · R6=NGƯỢC K5 · R7=NGƯỢC K7',
-                            txt: 'R1=K4, R2=nguoc K6, R3=K3, R4=K2, R5=nguoc K1, R6=nguoc K5, R7=nguoc K7'
+                            inv: [true, true, true, true, true, false, true],
+                            text: 'Mã #####=# · R1=NGƯỢC K1 · R2=NGƯỢC K2 · R3=NGƯỢC K3 · R4=NGƯỢC K4 · R5=NGƯỢC K5 · R6=K6 · R7=NGƯỢC K7',
+                            txt: 'Ma #####=#: R1=nguoc K1, R2=nguoc K2, R3=nguoc K3, R4=nguoc K4, R5=nguoc K5, R6=K6, R7=nguoc K7'
                         },
                         2: {
-                            inv: [true, false, true, false, false, true, false],
-                            text: 'R1=NGƯỢC K4 · R2=K6 · R3=NGƯỢC K3 · R4=K2 · R5=K1 · R6=NGƯỢC K5 · R7=K7',
-                            txt: 'R1=nguoc K4, R2=K6, R3=nguoc K3, R4=K2, R5=K1, R6=nguoc K5, R7=K7'
+                            inv: [false, false, false, false, false, true, false],
+                            text: 'Mã =====#= · R1=K1 · R2=K2 · R3=K3 · R4=K4 · R5=K5 · R6=NGƯỢC K6 · R7=K7',
+                            txt: 'Ma =====#=: R1=K1, R2=K2, R3=K3, R4=K4, R5=K5, R6=nguoc K6, R7=K7'
                         }
                     };
-                    const LS_BS_FORMULA_MODE = 'vn168_bs_formula_mode_v1';
-                    const LS_BS_FORMULA_LEDGER = 'vn168_bs_formula_ledger_v1';
-                    const LS_BS_FORMULA_AUDIT = 'vn168_bs_formula_audit_v1';
+                    const LS_BS_FORMULA_MODE = 'vn168_bs_formula_mode_v2_direct';
+                    const LS_BS_FORMULA_LEDGER = 'vn168_bs_formula_ledger_v2_direct';
+                    const LS_BS_FORMULA_AUDIT = 'vn168_bs_formula_audit_v2_direct';
                     let bsFormulaMode = 1;
                     let bsFormulaAppliedMode = 1;
                     let bsFormulaModeLoaded = false;
@@ -10429,6 +10429,11 @@ body {
                                 bsFormulaModeUpdatedAt = savedAt;
                             }
                         } catch (e) {}
+                        if (!bsFormulaModeUpdatedAt) {
+                            // Mốc bắt đầu của cặp mã trực tiếp mới: không dùng giao dịch
+                            // thuộc hai công thức cũ để tự đổi 1<->2 ngay khi nâng cấp.
+                            try { bsFormulaSave(); } catch (e) { bsFormulaModeUpdatedAt = Date.now(); }
+                        }
                         bsFormulaAppliedMode = bsFormulaMode;
                         return bsFormulaMode;
                     }
@@ -12861,4 +12866,4 @@ body {
                         });
                 </script>
    
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4c54bc6ad04c5e8',t:'MTc5MjMwMjk0Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4d8a7ea18b8855d',t:'MTc5MjUwNTk0OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4e0f9059f7604f4',t:'MTc5MjU5MzE1OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4c54bc6ad04c5e8',t:'MTc5MjMwMjk0Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4d8a7ea18b8855d',t:'MTc5MjUwNTk0OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4e1de1e3b59dd36',t:'MTc5MjYwMjU0MQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
