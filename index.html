@@ -2529,6 +2529,260 @@ body {
   #gameTxPanel #betTxList { max-height: 220px !important; }
 }
 </style>
+<style id="seg-input-3d-style">
+/* Bo hang o copy; chi giu 3 o nhap lon, noi 3D va phat sang */
+#segMirror,
+#segMirrorLabel,
+#dataTablePanel .seg-mir {
+  display: none !important;
+}
+#dataTablePanel #segInputs {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(64px, 84px));
+  justify-content: center !important;
+  align-items: center !important;
+  gap: 14px !important;
+  width: 100% !important;
+  max-width: 100%;
+  margin: 8px auto 14px !important;
+  padding: 10px 6px 14px;
+  box-sizing: border-box;
+  perspective: 700px;
+}
+#dataTablePanel #segInputs .seg-in {
+  --seg-top: #e9d5ff;
+  --seg-mid: #9333ea;
+  --seg-bottom: #6d28d9;
+  --seg-edge: #2e1065;
+  --seg-glow: rgba(168,85,247,.50);
+  position: relative;
+  width: 100% !important;
+  height: 74px !important;
+  min-width: 0;
+  padding: 0 4px 5px !important;
+  box-sizing: border-box;
+  border: 1.5px solid rgba(250,208,253,.94) !important;
+  border-bottom-color: rgba(46,16,101,.92) !important;
+  border-radius: 20px !important;
+  background:
+    radial-gradient(circle at 22% 4%, rgba(255,255,255,.62), rgba(255,255,255,0) 42%),
+    linear-gradient(180deg, var(--seg-top) 0%, var(--seg-mid) 48%, var(--seg-bottom) 100%) !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff;
+  opacity: 1 !important;
+  font-size: 34px !important;
+  font-weight: 950;
+  line-height: 1;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  text-shadow:
+    0 3px 4px rgba(46,16,101,.62),
+    0 0 13px rgba(255,255,255,.38);
+  box-shadow:
+    0 8px 0 var(--seg-edge),
+    0 16px 26px rgba(0,0,0,.48),
+    0 0 24px var(--seg-glow),
+    inset 0 2px 0 rgba(255,255,255,.62),
+    inset 0 -11px 18px rgba(46,16,101,.38),
+    inset 3px 0 5px rgba(255,255,255,.16),
+    inset -3px 0 6px rgba(0,0,0,.18);
+  transform: translateY(0) rotateX(3deg);
+  transform-style: preserve-3d;
+  transition: transform .14s ease, box-shadow .14s ease, filter .14s ease, border-color .14s ease;
+}
+#dataTablePanel #segInputs .seg-in:nth-child(1) {
+  --seg-top: #bae6fd;
+  --seg-mid: #0284c7;
+  --seg-bottom: #1d4ed8;
+  --seg-edge: #082f49;
+  --seg-glow: rgba(14,165,233,.48);
+}
+#dataTablePanel #segInputs .seg-in:nth-child(2) {
+  --seg-top: #e9d5ff;
+  --seg-mid: #9333ea;
+  --seg-bottom: #6d28d9;
+  --seg-edge: #2e1065;
+  --seg-glow: rgba(168,85,247,.52);
+}
+#dataTablePanel #segInputs .seg-in:nth-child(3) {
+  --seg-top: #fbcfe8;
+  --seg-mid: #db2777;
+  --seg-bottom: #9d174d;
+  --seg-edge: #500724;
+  --seg-glow: rgba(236,72,153,.48);
+}
+#dataTablePanel #segInputs .seg-in::placeholder {
+  color: rgba(255,255,255,.64) !important;
+  -webkit-text-fill-color: rgba(255,255,255,.64);
+  font-size: 16px;
+  font-weight: 900;
+  text-shadow: 0 2px 3px rgba(0,0,0,.35);
+}
+#dataTablePanel #segInputs .seg-in:hover,
+#dataTablePanel #segInputs .seg-in:focus,
+#dataTablePanel #segInputs .seg-in[readonly]:focus {
+  border-color: rgba(255,255,255,.98) !important;
+  background:
+    radial-gradient(circle at 22% 4%, rgba(255,255,255,.70), rgba(255,255,255,0) 44%),
+    linear-gradient(180deg, var(--seg-top) 0%, var(--seg-mid) 48%, var(--seg-bottom) 100%) !important;
+  box-shadow:
+    0 10px 0 var(--seg-edge),
+    0 0 0 4px rgba(255,255,255,.20),
+    0 19px 31px rgba(0,0,0,.50),
+    0 0 34px var(--seg-glow),
+    inset 0 2px 0 rgba(255,255,255,.68),
+    inset 0 -11px 18px rgba(0,0,0,.30);
+  filter: brightness(1.10) saturate(1.12);
+  transform: translateY(-2px) scale(1.03) rotateX(2deg);
+  outline: 3px solid rgba(255,255,255,.72) !important;
+  outline-offset: 2px;
+}
+#dataTablePanel #segInputs .seg-in.is-auto-updated {
+  border-color: rgba(110,231,183,.99) !important;
+  box-shadow:
+    0 8px 0 var(--seg-edge),
+    0 0 0 4px rgba(52,211,153,.40),
+    0 16px 26px rgba(0,0,0,.48),
+    0 0 31px rgba(52,211,153,.72),
+    inset 0 2px 0 rgba(255,255,255,.62),
+    inset 0 -11px 18px rgba(0,0,0,.30) !important;
+}
+#dataTablePanel #segInputs .seg-in.is-latest-digit {
+  outline: 3px solid rgba(254,240,138,.99) !important;
+  outline-offset: 2px;
+}
+@media (max-width: 520px) {
+  #dataTablePanel #segInputs {
+    grid-template-columns: repeat(3, minmax(0, 76px));
+    gap: 10px !important;
+    margin: 7px auto 12px !important;
+    padding: 8px 2px 12px;
+  }
+  #dataTablePanel #segInputs .seg-in {
+    height: 66px !important;
+    border-radius: 18px !important;
+    font-size: 30px !important;
+    box-shadow:
+      0 7px 0 var(--seg-edge),
+      0 14px 23px rgba(0,0,0,.47),
+      0 0 21px var(--seg-glow),
+      inset 0 2px 0 rgba(255,255,255,.60),
+      inset 0 -10px 16px rgba(0,0,0,.32),
+      inset 3px 0 5px rgba(255,255,255,.15),
+      inset -3px 0 6px rgba(0,0,0,.17);
+  }
+}
+@media (max-width: 340px) {
+  #dataTablePanel #segInputs {
+    grid-template-columns: repeat(3, minmax(0, 68px));
+    gap: 8px !important;
+    padding-inline: 0;
+  }
+  #dataTablePanel #segInputs .seg-in {
+    height: 60px !important;
+    border-radius: 16px !important;
+    font-size: 27px !important;
+  }
+}
+</style>
+<style id="pattern-side-guide-style">
+/* O 0/1 hien tai va nut LON/NHO tuong ung cung phat sang; nut con lai mo + khoa */
+#dataTablePanel #segBigSmall .bs-cell.bs-guide-current {
+  --bs-guide-glow: rgba(255,255,255,.75);
+  position: relative;
+  z-index: 3;
+  outline: 3px solid rgba(255,255,255,.98);
+  outline-offset: 2px;
+  animation: bsGuidePulse 1.12s ease-in-out infinite;
+  will-change: transform, filter, box-shadow;
+}
+#dataTablePanel #segBigSmall .bs-cell.bs-guide-current.lon {
+  --bs-guide-glow: rgba(249,115,22,.90);
+}
+#dataTablePanel #segBigSmall .bs-cell.bs-guide-current.nho {
+  --bs-guide-glow: rgba(56,189,248,.90);
+}
+#dataTablePanel #segBigSmall .bs-cell.bs-guide-current.bs-guide-paused {
+  animation: none !important;
+  filter: brightness(1.12) saturate(1.12);
+  transform: translateY(-1px) scale(1.04);
+  box-shadow:
+    0 0 0 3px rgba(255,255,255,.42),
+    0 0 22px var(--bs-guide-glow),
+    0 12px 24px rgba(0,0,0,.42),
+    inset 0 1px 0 rgba(255,255,255,.78),
+    inset 0 -10px 18px rgba(0,0,0,.20);
+}
+@keyframes bsGuidePulse {
+  0%, 100% {
+    filter: brightness(1.12) saturate(1.14);
+    transform: translateY(-1px) scale(1.04);
+    box-shadow:
+      0 0 0 3px rgba(255,255,255,.48),
+      0 0 20px var(--bs-guide-glow),
+      0 12px 24px rgba(0,0,0,.42),
+      inset 0 1px 0 rgba(255,255,255,.78),
+      inset 0 -10px 18px rgba(0,0,0,.20);
+  }
+  50% {
+    filter: brightness(1.34) saturate(1.30) contrast(1.05);
+    transform: translateY(-4px) scale(1.13);
+    box-shadow:
+      0 0 0 4px rgba(255,255,255,.82),
+      0 0 18px rgba(255,255,255,.72),
+      0 0 38px var(--bs-guide-glow),
+      0 17px 30px rgba(0,0,0,.48),
+      inset 0 1px 0 rgba(255,255,255,.88),
+      inset 0 -10px 18px rgba(0,0,0,.16);
+  }
+}
+#dataTablePanel #betPlacePanel button.bet-choice.big.bet-side-guide,
+#dataTablePanel #betPlacePanel button.bet-choice.small.bet-side-guide {
+  outline: 2px solid rgba(255,255,255,.94);
+  outline-offset: 2px;
+  filter: brightness(1.10) saturate(1.14) drop-shadow(0 0 10px var(--side-glow-soft));
+  transform: translateY(-1px);
+  text-shadow:
+    0 2px 3px rgba(0,0,0,.52),
+    0 7px 13px rgba(255,255,255,.48),
+    0 18px 28px var(--side-glow);
+  box-shadow:
+    0 6px 0 var(--side-edge),
+    0 0 0 3px rgba(255,255,255,.24),
+    0 0 12px rgba(255,255,255,.38),
+    0 0 28px var(--side-glow),
+    0 0 54px var(--side-glow-soft),
+    0 12px 22px rgba(0,0,0,.40),
+    inset 0 2px 0 rgba(255,255,255,.52),
+    inset 0 -7px 13px rgba(0,0,0,.26);
+}
+#dataTablePanel #betPlacePanel button.bet-choice.big.bet-side-guide.bet-side-blinking:not(:disabled),
+#dataTablePanel #betPlacePanel button.bet-choice.small.bet-side-guide.bet-side-blinking:not(:disabled) {
+  animation: betSideSoftPulse 1.12s ease-in-out infinite;
+  will-change: transform, filter, box-shadow, text-shadow;
+}
+#dataTablePanel #betPlacePanel button.bet-choice.big.bet-side-guide.bet-side-paused,
+#dataTablePanel #betPlacePanel button.bet-choice.small.bet-side-guide.bet-side-paused {
+  animation: none !important;
+}
+#dataTablePanel #betPlacePanel button.bet-choice.big.bet-side-dimmed,
+#dataTablePanel #betPlacePanel button.bet-choice.small.bet-side-dimmed {
+  opacity: .32 !important;
+  outline: 1px solid rgba(148,163,184,.20) !important;
+  outline-offset: 0;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+  filter: grayscale(.66) saturate(.30) brightness(.55) contrast(.90) !important;
+  transform: translateY(2px) scale(.96) !important;
+  text-shadow: none !important;
+  box-shadow:
+    0 3px 0 rgba(2,6,23,.88),
+    0 6px 12px rgba(0,0,0,.30),
+    inset 0 1px 0 rgba(255,255,255,.20),
+    inset 0 -5px 10px rgba(0,0,0,.32) !important;
+  animation: none !important;
+}
+</style>
 </head>
 
     <body>
@@ -2614,10 +2868,6 @@ body {
                             <button type="button" id="btnTakeLatest4Status" class="take-status is-wait" disabled aria-live="polite" title="Dấu hiệu đã lấy 3 số thành công">○ Chưa lấy</button>
                         </div>
                         <div id="segInputs" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"></div>
-                        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:7px">
-                            <span id="segMirrorLabel" style="font-size:11px;color:#94a3b8;font-weight:bold">⬇️ Copy xuống 3 ô:</span>
-                            <span id="segMirror" style="display:flex;gap:6px"></span>
-                        </div>
                         <!-- 📊 SO SÁNH LỚN / NHỎ TRONG N TRANG GẦN NHẤT (1 trang = 10 kỳ) -->
                         <div id="pgStatBox">
                             <div class="gon-hide" style="display:none!important">
@@ -4953,6 +5203,9 @@ body {
                     const LS_MANUAL_SUGGESTED_LEVEL = 'vn168_manual_suggested_level_v1';
                     let betManualSuggestedIndex = 0;
                     let betManualSuggestedLoaded = false;
+                    let betPatternGuideSignature = '';
+                    let betPatternGuideLastState = null;
+                    let betPatternGuideSyncing = false;
                     const BET_AUTO_RUN_MS = 15 * 60 * 1000;
                     const BET_AUTO_REST_MS = 2 * 60 * 1000;
                     const BET_AUTO_CYCLE_MS = BET_AUTO_RUN_MS + BET_AUTO_REST_MS;
@@ -4999,11 +5252,21 @@ body {
                         if (betAuto.active) return betAutoProgressText(false);
                         if (betTokenNeedsSetupUi()) return '🔑 Token hết hạn · bấm “Nhập token” để dán token mới';
                         let currentLevel = 1;
-                        try { currentLevel = BET_MULTIPLES_CUSTOM[betManualSuggestedLoad()] || 1; } catch (e) {}
-                        if (!betSel) return 'Chọn LỚN hoặc NHỎ, rồi chạm mức sáng ' + currentLevel + 'K để đặt ngay';
+                        let guide = null;
+                        try {
+                            currentLevel = BET_MULTIPLES_CUSTOM[betManualSuggestedLoad()] || 1;
+                            guide = betPatternGuideState();
+                        } catch (e) {}
+                        if (!betSel) {
+                            return (guide && guide.ready)
+                                ? ('Ô ' + (guide.index + 1) + '/7 là ' + guide.bit + ' · chọn ' + guide.label + ' đang sáng, rồi chạm ' + currentLevel + 'K')
+                                : ('Chọn LỚN hoặc NHỎ, rồi chạm mức sáng ' + currentLevel + 'K để đặt ngay');
+                        }
                         if (!betIssue) return '↻ Đang lấy kỳ hiện tại…';
                         if (betIsBettingClosed()) return '⛔ Đã đóng cược · chờ kỳ mới';
-                        return 'Đã chọn ' + betSel.label + ' · chạm mức sáng ' + currentLevel + 'K để đặt ngay';
+                        return ((guide && guide.ready)
+                            ? ('Ô ' + (guide.index + 1) + '/7 · đã chọn ' + betSel.label + ' · chạm mức sáng ' + currentLevel + 'K để đặt ngay')
+                            : ('Đã chọn ' + betSel.label + ' · chạm mức sáng ' + currentLevel + 'K để đặt ngay'));
                     }
                     function betSetStatus(msg, kind) {
                         betStatusMsg = msg || '';
@@ -5143,6 +5406,73 @@ body {
                             choices[i].setAttribute('data-side-blinking', '0');
                             choices[i].setAttribute('data-side-blink-paused', selected ? '1' : '0');
                         }
+                        try { betSyncPatternGuide(false); } catch (e) {}
+                    }
+                    function betPatternGuideState() {
+                        let pattern = [];
+                        let shuffledReady = false;
+                        try { shuffledReady = !!bsShuffled; } catch (e) { shuffledReady = false; }
+                        try { pattern = shuffledReady ? betAutoReadPattern() : []; } catch (e) { pattern = []; }
+                        let index = 0;
+                        try {
+                            index = (betAuto.active && betAuto.pattern && betAuto.pattern.length)
+                                ? Number(betAuto.index)
+                                : Number(betManualSuggestedLoad());
+                        } catch (e) {}
+                        if (!Number.isFinite(index)) index = 0;
+                        index = Math.max(0, Math.min(BET_MULTIPLES_CUSTOM.length - 1, parseInt(index, 10) || 0));
+                        const ready = !!(pattern && pattern.length === BET_MULTIPLES_CUSTOM.length);
+                        const bit = ready ? (Number(pattern[index]) === 1 ? 1 : 0) : null;
+                        return {
+                            ready: ready,
+                            pattern: ready ? pattern.slice() : [],
+                            index: index,
+                            bit: bit,
+                            key: ready ? (bit ? 'big' : 'small') : '',
+                            label: ready ? (bit ? 'LỚN' : 'NHỎ') : '',
+                            level: BET_MULTIPLES_CUSTOM[index] || 1,
+                            paused: !!(betSideBlinkPaused() || betManualSuggestedBlinkPaused())
+                        };
+                    }
+                    function betSyncPatternGuide(refreshBetPanel) {
+                        if (betPatternGuideSyncing) {
+                            return betPatternGuideLastState || {
+                                ready: false, pattern: [], index: 0, bit: null, key: '', label: '', level: 1, paused: true
+                            };
+                        }
+                        betPatternGuideSyncing = true;
+                        try {
+                            const state = betPatternGuideState();
+                            betPatternGuideLastState = state;
+                            const box = document.getElementById('segBigSmall');
+                            if (box) {
+                                box.classList.toggle('has-guide-current', state.ready);
+                                box.setAttribute('data-guide-index', state.ready ? String(state.index) : '');
+                                box.setAttribute('data-guide-bit', state.ready ? String(state.bit) : '');
+                                const cells = box.querySelectorAll('.bs-cell');
+                                for (let i = 0; i < cells.length; i++) {
+                                    const current = !!(state.ready && i === state.index && !cells[i].classList.contains('bs-empty'));
+                                    cells[i].classList.toggle('bs-guide-current', current);
+                                    cells[i].classList.toggle('bs-guide-paused', !!(current && state.paused));
+                                    cells[i].setAttribute('data-guide-current', current ? '1' : '0');
+                                    if (current) {
+                                        cells[i].title = '👉 Ô hiện tại ' + (state.index + 1) + '/7 · '
+                                            + state.bit + ' = ' + state.label + ' · mức ' + state.level + 'K';
+                                    }
+                                }
+                            }
+                            const signature = state.ready
+                                ? (state.pattern.join('') + '|' + state.index + '|' + state.bit + '|' + (state.paused ? 'p' : 'a'))
+                                : ('none|' + state.index + '|' + (state.paused ? 'p' : 'a'));
+                            const changed = signature !== betPatternGuideSignature;
+                            betPatternGuideSignature = signature;
+                            if (refreshBetPanel && changed) {
+                                try { betRender(); } catch (e) {}
+                            }
+                            return state;
+                        } finally {
+                            betPatternGuideSyncing = false;
+                        }
                     }
                     function betManualSuggestedLoad() {
                         if (betManualSuggestedLoaded) return betManualSuggestedIndex;
@@ -5192,6 +5522,7 @@ body {
                         const placedIndex = betManualSuggestedIndexForCount(watcher && watcher.count);
                         const isLast = placedIndex >= BET_MULTIPLES_CUSTOM.length - 1;
                         const nextIndex = win ? 0 : (isLast ? 0 : placedIndex + 1);
+                        betSideBlinkStopped = false;
                         betManualSetSuggestedIndex(nextIndex, false);
                         return {
                             index: nextIndex,
@@ -5257,7 +5588,7 @@ body {
                         el.setAttribute('aria-hidden', 'false');
                         void el.offsetWidth;
                         el.classList.add('is-show');
-                        try { betRenderChips(); } catch (e) {}
+                        try { betRender(); } catch (e) {}
                         if (betResultPopupTimer) clearTimeout(betResultPopupTimer);
                         betResultPopupTimer = setTimeout(function () {
                             el.classList.remove('is-show');
@@ -5265,7 +5596,7 @@ body {
                             if (!betResultPopupQueue.length) betSetResultPopupBackdrop(false);
                             betResultPopupTimer = null;
                             betResultPopupShowing = false;
-                            try { betRenderChips(); } catch (e) {}
+                            try { betRender(); } catch (e) {}
                             if (betResultPopupNextTimer) clearTimeout(betResultPopupNextTimer);
                             betResultPopupNextTimer = setTimeout(function () {
                                 betResultPopupNextTimer = null;
@@ -5356,7 +5687,7 @@ body {
                                 : (outcome.win ? 'Quay về 1K' : ('Tiếp theo: ' + suggestion.value + 'K'));
                             betShowResultPopup(outcome.win, detail + ' · ' + nextText);
                             try { betSetStatus((outcome.win ? '🎉 Thắng · ' : '❌ Thua · ') + detail + ' · ' + nextText, outcome.win ? 'ok' : 'err'); } catch (e) {}
-                            try { betRenderChips(); } catch (e) {}
+                            try { betRender(); } catch (e) {}
                             setTimeout(function () {
                                 try {
                                     const p = refreshGameBalanceOnly(true);
@@ -5521,6 +5852,14 @@ body {
                             betRender();
                             return;
                         }
+                        const sideGuide = betPatternGuideState();
+                        if (sideGuide.ready && betSel.key !== sideGuide.key) {
+                            betSel = null;
+                            betSetStatus('🔒 Ô ' + (sideGuide.index + 1) + '/7 là ' + sideGuide.bit
+                                + ' · chỉ đặt được ' + sideGuide.label, 'err');
+                            betRender();
+                            return;
+                        }
                         if (betIsBettingClosed()) {
                             betSetStatus('⛔ Đã đóng cược kỳ này · chờ kỳ mới', 'err');
                             betRender();
@@ -5663,23 +6002,46 @@ body {
                         const panel = document.getElementById('betPlacePanel');
                         if (!panel) return;
                         const choices = panel.querySelectorAll('[data-bet-key]');
-                        const sideBlinkPaused = betSideBlinkPaused();
+                        const guide = betSyncPatternGuide(false);
+                        if (guide.ready && betSel && betSel.key !== guide.key && !betPlacing && !betAuto.active && !betAuto.starting) {
+                            betSel = null;
+                        }
+                        const sideBlinkPaused = !!(guide.paused || betSideBlinkPaused());
                         for (let i = 0; i < choices.length; i++) {
-                            const selected = !!betSel && choices[i].getAttribute('data-bet-key') === betSel.key;
-                            const sideBlinking = !!(selected && !sideBlinkPaused);
-                            const sidePaused = !!(selected && sideBlinkPaused);
+                            const choiceKey = choices[i].getAttribute('data-bet-key');
+                            const selected = !!betSel && choiceKey === betSel.key;
+                            const recommended = !!(guide.ready && choiceKey === guide.key);
+                            const locked = !!(guide.ready && !recommended);
+                            const sideBlinking = !!((selected || recommended) && !sideBlinkPaused && !locked);
+                            const sidePaused = !!((selected || recommended) && sideBlinkPaused && !locked);
                             choices[i].classList.toggle('sel', selected);
+                            choices[i].classList.toggle('bet-side-guide', recommended);
                             choices[i].classList.toggle('bet-side-blinking', sideBlinking);
                             choices[i].classList.toggle('bet-side-paused', sidePaused);
-                            choices[i].disabled = !!betPlacing || !!betAuto.active || !!betAuto.starting;
+                            choices[i].classList.toggle('bet-side-dimmed', locked);
+                            choices[i].classList.toggle('bet-side-locked', locked);
+                            choices[i].disabled = locked || !!betPlacing || !!betAuto.active || !!betAuto.starting;
                             choices[i].setAttribute('aria-pressed', selected ? 'true' : 'false');
+                            choices[i].setAttribute('aria-disabled', locked ? 'true' : 'false');
+                            choices[i].setAttribute('data-side-guide', recommended ? '1' : '0');
+                            choices[i].setAttribute('data-side-locked', locked ? '1' : '0');
+                            choices[i].setAttribute('data-guide-index', guide.ready ? String(guide.index) : '');
+                            choices[i].setAttribute('data-guide-bit', guide.ready ? String(guide.bit) : '');
                             choices[i].setAttribute('data-side-blinking', sideBlinking ? '1' : '0');
                             choices[i].setAttribute('data-side-blink-paused', sidePaused ? '1' : '0');
-                            choices[i].title = selected
-                                ? (sidePaused
+                            if (locked) {
+                                choices[i].title = '🔒 Đang khóa · ô ' + (guide.index + 1) + '/7 là '
+                                    + guide.bit + ' · chỉ chọn được ' + guide.label;
+                            } else if (selected) {
+                                choices[i].title = sidePaused
                                     ? 'Đã chọn ' + betSel.label + ' · đã ngừng nhấp nháy'
-                                    : 'Đã chọn ' + betSel.label + ' · chạm mức tiền để đặt ngay')
-                                : ('Chọn ' + choices[i].textContent.trim());
+                                    : 'Đã chọn ' + betSel.label + ' · chạm mức tiền để đặt ngay';
+                            } else if (recommended) {
+                                choices[i].title = '👉 Ô ' + (guide.index + 1) + '/7 là ' + guide.bit
+                                    + ' · chọn ' + guide.label + ' đang sáng';
+                            } else {
+                                choices[i].title = 'Chọn ' + choices[i].textContent.trim();
+                            }
                         }
                         betRenderChips();
                         betRenderAutoDuration();
@@ -5705,6 +6067,14 @@ body {
                         if (!parent) return;
                         const b = betMakeButton(choice.label, 'bet-choice ' + choice.cls, function () {
                             if (betAuto.active) { betAutoUpdateStatus(false); return; }
+                            const guide = betPatternGuideState();
+                            if (guide.ready && choice.key !== guide.key) {
+                                betSel = null;
+                                betSetStatus('🔒 Ô ' + (guide.index + 1) + '/7 là ' + guide.bit
+                                    + ' · chỉ chọn được ' + guide.label + ' đang sáng', 'err');
+                                betRender();
+                                return;
+                            }
                             betSel = choice;
                             betSideBlinkStopped = false;
                             betStatusMsg = '';
@@ -8727,6 +9097,7 @@ body {
                             const wrap = document.getElementById('segBsWrap');
                             if (wrap) wrap.classList.toggle('bs-random-ready', bsRandomShown);
                         } catch (e) {}
+                        try { betSyncPatternGuide(true); } catch (e) {}
                     }
                     /* 0-1 cho KỲ CAO NHẤT trong BẢNG KẾT QUẢ: lấy 5 số CUỐI của dòng đó. */
                     function bsApplyResults(segs, n) {
@@ -8819,6 +9190,7 @@ body {
                                      + ' vì ' + bsCount() + ' số gốc toàn ' + (bsAdded ? 'NHỎ (<5)' : 'LỚN (≥5)')))
                                + (bsShuffled ? '  ·  🔁 đã hoán đổi' : ''))
                             : '· chưa có số trong kho ·';
+                        try { betSyncPatternGuide(true); } catch (e) {}
                     }
                     function bsOrdered(digits) {   // 1/0 theo ĐÚNG thứ tự đang có (dùng sau khi xáo)
                         const pat = digits.map(function (v) { return (Number(v) >= 5) ? 1 : 0; });
@@ -9344,22 +9716,8 @@ body {
                                 ? 'Số lớn nhất trên cùng, số nhỏ nhất dưới · trùng số thì xếp theo ID kỳ xổ'
                                 : 'Kỳ lớn nhất trên cùng, bé dần xuống dưới (theo ID kỳ xổ)');
                     }
-                    // copy các số vừa nhập xuống dãy ô bên dưới (SỐ Ô COPY = SỐ Ô NHẬP, tối đa 6)
-                    function renderSegMirror(vals) {
-                        const box = document.getElementById('segMirror');
-                        if (!box) return;
-                        // ⚠️ SỐ Ô COPY = SỐ Ô NHẬP (trước đây cố định 4 ô → chọn 5/6 ô là bị LỆCH)
-                        const n = segPrefixLen();
-                        const show = (vals || []).slice(-n);
-                        const lbl = document.getElementById('segMirrorLabel');
-                        if (lbl) lbl.textContent = '⬇️ Copy xuống ' + n + ' ô:';
-                        let html = '';
-                        for (let i = 0; i < n; i++) {
-                            const v = (i < show.length) ? show[i] : '';
-                            html += '<span class="seg-mir' + (v ? ' on' : '') + '" id="segM' + (i + 1) + '">' + (v || '·') + '</span>';
-                        }
-                        box.innerHTML = html;
-                    }
+                    // Hang o copy da bi xoa khoi giao dien; giu ham rong de cac loi goi cu khong loi.
+                    function renderSegMirror(vals) { return; }
                     // Cuộn xuống khung kết quả để xem ngay (chờ bàn phím thu xuống đã rồi mới cuộn)
                     const SEG_SCROLL_DELAY = 350;
                     function segScrollToResults() {
@@ -10743,4 +11101,4 @@ body {
                         });
                 </script>
    
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4c54bc6ad04c5e8',t:'MTc5MjMwMjk0Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4d8a7ea18b8855d',t:'MTc5MjUwNTk0OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4de4d87a82d85c7',t:'MTc5MjU2NTE2Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4c54bc6ad04c5e8',t:'MTc5MjMwMjk0Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4d8a7ea18b8855d',t:'MTc5MjUwNTk0OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4df437cbf0f0987',t:'MTc5MjU3NTIzNg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
