@@ -2493,6 +2493,28 @@ body {
   transition: transform .18s ease;
 }
 #betWaitOverlay.is-show .bet-wait-card { transform: translateY(0) scale(1); }
+#betWaitBalance {
+  display: inline-flex;
+  max-width: 100%;
+  margin: 0 auto 11px;
+  padding: 7px 13px;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border: 1px solid rgba(253,224,71,.52);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(245,158,11,.22), rgba(146,64,14,.20));
+  color: #fef3c7;
+  font-size: clamp(16px, 5vw, 21px);
+  line-height: 1.15;
+  font-weight: 950;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .2px;
+  overflow-wrap: anywhere;
+  text-shadow: 0 2px 5px rgba(0,0,0,.48);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 8px 20px rgba(0,0,0,.28);
+}
+#betWaitBalance:not(.is-known) { color: #cbd5e1; border-color: rgba(203,213,225,.34); }
 #betWaitTitle {
   font-size: clamp(19px, 6vw, 28px);
   line-height: 1.12;
@@ -3262,7 +3284,7 @@ body {
                             <button type="button" id="btnAutoCycle" title="Tự bấm LỚN/NHỎ theo ô đang sáng trong dãy 7 ô, rồi tự bấm mức cược tương ứng. Khi thắng, app tự lấy bộ 3 số mới và tự bật lại chu kỳ khi dãy/kỳ đã sẵn sàng; thua ở 180K thì báo chu kỳ thất bại. Bấm lần nữa để dừng.">▶ TỰ CHẠY CHU KỲ</button>
                             <div id="betResultPopupBackdrop" aria-hidden="true"></div>
                             <div id="betResultPopup" aria-live="polite" aria-hidden="true"><div id="betResultPopupTitle">THẮNG</div><div id="betResultPopupDetail"></div></div>
-                            <div id="betWaitOverlay" aria-live="polite" aria-hidden="true"><div class="bet-wait-card"><div id="betWaitTitle">ĐÃ ĐẶT</div><div id="betWaitClock"><span id="betWaitSeconds">--</span><small>GIÂY</small></div><div id="betWaitDetail">Đang chờ kết quả…</div><button type="button" id="betWaitHideBtn" title="Chỉ dùng khi chờ quá lâu để kiểm tra token hoặc mạng">Ẩn tạm để kiểm tra token/mạng</button></div></div>
+                            <div id="betWaitOverlay" aria-live="polite" aria-hidden="true"><div class="bet-wait-card"><div id="betWaitBalance">💰 Số dư: --</div><div id="betWaitTitle">ĐÃ ĐẶT</div><div id="betWaitClock"><span id="betWaitSeconds">--</span><small>GIÂY</small></div><div id="betWaitDetail">Đang chờ kết quả…</div><button type="button" id="betWaitHideBtn" title="Chỉ dùng khi chờ quá lâu để kiểm tra token hoặc mạng">Ẩn tạm để kiểm tra token/mạng</button></div></div>
                             <button type="button" id="btnSleepScreen" title="Giữ app chạy và phủ màn hình đen thay vì bấm nút nguồn tắt màn hình">🌙 MÀN ĐEN GIỮ CHẠY</button>
                             <div id="betSleepOverlay" aria-hidden="true"><div class="bet-sleep-card"><div class="bet-sleep-title">ĐANG CHẠY</div><div id="betSleepStatus">Đang giữ app chạy…</div><div class="bet-sleep-hint">Chạm giữ 1 giây để hiện app</div></div></div>
                         </div>
@@ -5235,7 +5257,21 @@ body {
                         const box = document.getElementById(id);
                         return !!(box && box.querySelector('.gtx-row'));
                     }
+                    function gtxSyncWaitBalance(state, amount, title) {
+                        const waitEl = document.getElementById('betWaitBalance');
+                        if (!waitEl) return '';
+                        let balance = state === 'ok' ? gtxParseMoney(amount) : NaN;
+                        if (!Number.isFinite(balance)) {
+                            try { balance = Number(gtxLastBalance); } catch (e) { balance = NaN; }
+                        }
+                        const text = '💰 Số dư: ' + (Number.isFinite(balance) ? gtxFmtMoney(balance) : '--');
+                        if (waitEl.textContent !== text) waitEl.textContent = text;
+                        waitEl.classList.toggle('is-known', Number.isFinite(balance));
+                        waitEl.title = title || 'Số dư ví trong game';
+                        return text;
+                    }
                     function gtxSetBalance(state, amount, title, label) {
+                        try { gtxSyncWaitBalance(state, amount, title); } catch (e) {}
                         const el = document.getElementById('gameBalance');
                         if (!el) return;
                         el.classList.remove('is-wait', 'is-loading', 'is-ok', 'is-err');
@@ -6014,6 +6050,10 @@ body {
                         overlay.classList.toggle('is-big', !!(state && state.key === 'big'));
                         overlay.classList.toggle('is-small', !!(state && state.key === 'small'));
                         overlay.setAttribute('aria-hidden', show ? 'false' : 'true');
+                        try {
+                            const waitBalanceText = gtxSyncWaitBalance('', null);
+                            if (waitBalanceText) overlay.setAttribute('data-wait-balance', waitBalanceText);
+                        } catch (e) {}
                         if (!show || !state) {
                             overlay.classList.remove('is-overdue');
                             const hiddenClock = document.getElementById('betWaitClock');
@@ -13289,4 +13329,4 @@ body {
                         });
                 </script>
    
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4c54bc6ad04c5e8',t:'MTc5MjMwMjk0Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4d8a7ea18b8855d',t:'MTc5MjUwNTk0OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4e25fe7ef5609d0',t:'MTc5MjYwNzg1Nw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4c54bc6ad04c5e8',t:'MTc5MjMwMjk0Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4d8a7ea18b8855d',t:'MTc5MjUwNTk0OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4e320fc5a670994',t:'MTc5MjYxNTc2Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
