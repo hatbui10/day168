@@ -3657,6 +3657,14 @@ body {
                             else if (typeof parsed === 'string' && !out.token) out.token = extractToken(parsed);
                         } catch (e) {}
                         const jwts = raw.match(/eyJ[A-Za-z0-9\-_]+(?:\.[A-Za-z0-9\-_]+){1,3}/g) || [];
+                        if (!out.refreshToken) {
+                            const rmLabel = raw.match(/refresh[_ ]?token["']?\s*(?:[:=]\s*)?["']?\s*(eyJ[A-Za-z0-9\-_]+(?:\.[A-Za-z0-9\-_]+){1,3})/i);
+                            if (rmLabel) out.refreshToken = cleanAuthSecret(rmLabel[1]);
+                        }
+                        if (!out.token) {
+                            const amLabel = raw.match(/(?:^|[^A-Za-z])(?:access[_ ]?token|token)["']?\s*(?:[:=]\s*)?["']?\s*(eyJ[A-Za-z0-9\-_]+(?:\.[A-Za-z0-9\-_]+){1,3})/i);
+                            if (amLabel) out.token = amLabel[1];
+                        }
                         if (!out.token && jwts.length) out.token = jwts[0];
                         if (!out.refreshToken) {
                             const rm = raw.match(/refresh[_ ]?token["']?\s*[:=]\s*["']?([A-Za-z0-9._\-+/=]+)/i);
@@ -3704,10 +3712,51 @@ body {
                         try { return 'đến ' + new Date(exp).toLocaleTimeString('vi-VN', { hour12: false }); }
                         catch (e) { return 'đến ' + new Date(exp).toISOString(); }
                     }
+                    function refreshTokenInfo(value) {
+                        const refresh = cleanAuthSecret(value === undefined ? getRefreshToken() : value);
+                        if (!refresh) {
+                            return {
+                                present: false,
+                                usable: false,
+                                truncated: false,
+                                expired: false,
+                                expMs: 0,
+                                text: 'thiếu refreshToken'
+                            };
+                        }
+                        const expMs = tokenExpMs(refresh);
+                        const looksJwt = refresh.indexOf('eyJ') === 0;
+                        const parts = refresh.split('.');
+                        const truncated = refresh.indexOf('…') >= 0
+                            || refresh.indexOf('...') >= 0
+                            || (looksJwt && parts.length !== 3)
+                            || (looksJwt && !expMs);
+                        const expired = !!expMs && expMs <= Date.now();
+                        let text = '';
+                        if (truncated) text = 'refreshToken có dấu hiệu bị cắt/không đọc được hạn';
+                        else if (expired) text = 'refreshToken đã hết hạn ' + tokenExpiryText(refresh);
+                        else if (expMs) text = 'refreshToken ' + tokenExpiryText(refresh);
+                        else text = 'refreshToken không rõ hạn';
+                        return {
+                            present: true,
+                            usable: !truncated && !expired,
+                            truncated: truncated,
+                            expired: expired,
+                            expMs: expMs,
+                            text: text
+                        };
+                    }
+                    function hasUsableRefreshToken(value) {
+                        try { return !!refreshTokenInfo(value).usable; }
+                        catch (e) { return !!getRefreshToken(); }
+                    }
                     function refreshErrorSummary(e) {
                         if (!e) return '';
                         if (e.status) return 'HTTP ' + e.status;
-                        if (e.code !== undefined && e.code !== null && e.code !== '') return 'mã ' + e.code;
+                        if (e.code !== undefined && e.code !== null && e.code !== '') {
+                            const msg = String(e.message || '').replace(/\s+/g, ' ').trim();
+                            return 'mã ' + e.code + (msg && msg.indexOf('RefreshToken trả mã') !== 0 ? (': ' + msg.slice(0, 80)) : '');
+                        }
                         if (e.kind === 'net') return 'mất kết nối/CORS';
                         if (e.kind) return String(e.kind);
                         return String(e.message || 'lỗi không rõ').slice(0, 80);
@@ -3773,11 +3822,13 @@ body {
                         const el = document.getElementById('tokenInput');
                         if (!el) return;
                         const bundle = parseAuthBundle(el.value);
+                        const previousSavedToken = extractToken(currentToken || '');
                         currentToken = bundle.token || '';
                         if (!currentToken) { setStatus('⚠️ Ô token đang trống.'); return; }
                         storeAuthBundle(bundle, { syncFirebase: false });
                         if (fbDB && !applyingRemote) writeToFirebase();
-                        setStatus('Đã lưu token ✓ — app TỰ tải nền 5000 trang, không cần bấm nút.');
+                        const saveBundleWarning = gtxAuthBundleWarning(currentToken, bundle, previousSavedToken);
+                        setStatus(saveBundleWarning || 'Đã lưu token ✓ — app TỰ tải nền 5000 trang, không cần bấm nút.');
                         autoStartBulkLoad('saveToken');
                     }
                     
@@ -3816,13 +3867,19 @@ body {
                             const text = await navigator.clipboard.readText();
                             const bundle = parseAuthBundle(text);
                             const tok = bundle.token;
-                            if (tok && tok.indexOf('eyJ') === 0) {
+                            const incomingRefreshInfo = refreshTokenInfo(bundle.refreshToken || '');
+                            let previousClipboardToken = '';
+                            try { previousClipboardToken = extractToken(getToken() || ''); } catch (e) {}
+                            const sameClipboardToken = !!tok && !!previousClipboardToken && tok === previousClipboardToken;
+                            if (tok && tok.indexOf('eyJ') === 0 && (incomingRefreshInfo.usable || (sameClipboardToken && hasUsableRefreshToken()))) {
                                 const el = document.getElementById('tokenInput');
                                 if (el) el.value = text;
                                 storeAuthBundle(bundle, { syncFirebase: false });
                                 if (fbDB && !applyingRemote) writeToFirebase();
                                 setStatus('✓ Đã lấy token từ clipboard!');
                                 autoStartBulkLoad('clipboard');
+                            } else if (tok && tok.indexOf('eyJ') === 0) {
+                                setStatus('⚠️ Clipboard mới có access token, chưa có refreshToken dùng được — chưa lưu để tránh hết hạn sau khoảng 15 phút. Hãy sao chép gói JSON token + refreshToken + tokenHeader.');
                             } else {
                                 setStatus('Clipboard không có token hợp lệ (eyJ...).');
                             }
@@ -5237,11 +5294,20 @@ body {
                         return res;
                     }
                     function gtxTokenDiagText(token) {
-                        const refresh = getRefreshToken();
-                        const refreshText = !refresh
-                            ? 'thiếu refreshToken'
-                            : (tokenExpMs(refresh) ? ('refreshToken ' + tokenExpiryText(refresh)) : 'refreshToken không đọc được hạn (có thể bị cắt)');
-                        return tokenExpiryText(token) + ' · ' + refreshText;
+                        const info = refreshTokenInfo();
+                        return tokenExpiryText(token) + ' · ' + info.text;
+                    }
+                    function gtxAuthBundleWarning(storedToken, incomingBundle, previousToken) {
+                        const info = refreshTokenInfo();
+                        const incomingRefresh = incomingBundle ? cleanAuthSecret(incomingBundle.refreshToken || '') : '';
+                        const incomingToken = incomingBundle ? extractToken(incomingBundle.token || '') : extractToken(storedToken || '');
+                        if (!incomingRefresh && info.usable && previousToken && incomingToken && previousToken !== incomingToken) {
+                            return '⚠️ Gói vừa dán không có refreshToken; app đang giữ refreshToken của phiên trước nên chưa chắc gia hạn được. Hãy dán gói JSON gồm token + refreshToken + tokenHeader.';
+                        }
+                        if (info.usable) return '';
+                        return '⚠️ Đã nhận access token nhưng ' + info.text
+                            + ' · access token hết hạn ' + tokenExpiryText(storedToken)
+                            + ' và app chưa thể tự gia hạn. Hãy dán gói JSON gồm token + refreshToken + tokenHeader.';
                     }
                     async function gtxValidateImportedToken(importSeq, importedToken) {
                         let token = extractToken(importedToken || '');
@@ -5272,6 +5338,14 @@ body {
                         try { await loadBetConfig(true); } catch (e) {}
                         try { await refreshBetIssue(true); } catch (e) {}
                         try { betRender(); } catch (e) {}
+                        if (ok) {
+                            try { token = extractToken(getToken() || token); } catch (e) {}
+                            const bundleWarning = gtxAuthBundleWarning(token, null, '');
+                            if (bundleWarning) {
+                                gtxSetNote('betTxNote', bundleWarning);
+                                try { betSetStatus(bundleWarning, 'err'); } catch (e) {}
+                            }
+                        }
                         try {
                             if (typeof autoStartBulkLoad === 'function') autoStartBulkLoad('token đã kiểm tra');
                         } catch (e) {}
@@ -5283,6 +5357,8 @@ body {
                             gtxShowTokenProblem('Token không hợp lệ');
                             return false;
                         }
+                        let previousToken = '';
+                        try { previousToken = extractToken(getToken() || ''); } catch (e) {}
                         try { if (typeof betAuto !== 'undefined' && betAuto.active) betAutoStop('Đã dừng tự động vì đổi token'); } catch (e) {}
                         const importSeq = ++gtxTokenImportSeq;
                         const el = document.getElementById('tokenInput');
@@ -5305,8 +5381,12 @@ body {
                             return false;
                         }
                         const diag = gtxTokenDiagText(stored);
+                        const bundleWarning = gtxAuthBundleWarning(stored, bundle, previousToken);
                         gtxSetBalance('loading', null, 'Đã nhận token · ' + diag + ' · đang kiểm tra');
-                        gtxSetNote('betTxNote', 'Đã nhận token · ' + diag);
+                        gtxSetNote('betTxNote', bundleWarning || ('Đã nhận token · ' + diag));
+                        if (bundleWarning) {
+                            try { betSetStatus(bundleWarning, 'err'); } catch (e) {}
+                        }
                         gtxSetEmpty('betTxList', 'Đang kiểm tra token…');
                         setTimeout(function () {
                             try {
@@ -5319,23 +5399,30 @@ body {
                     function gtxPromptNewToken(customMsg) {
                         let text = '';
                         try {
-                            text = window.prompt(customMsg || 'Dán token game mới (eyJ...) vào đây:', '') || '';
+                            text = window.prompt(customMsg || 'Dán GÓI JSON gồm token + refreshToken + tokenHeader để tự gia hạn. Nếu chỉ dán token eyJ..., app chỉ chạy đến khi access token hết hạn (thường khoảng 15 phút):', '') || '';
                         } catch (e) {}
                         if (!text) return false;
                         return gtxAcceptTokenText(text);
                     }
                     async function gtxTokenSetupClicked(reason) {
+                        let clipboardWarning = '';
                         try {
                             if (navigator.clipboard && navigator.clipboard.readText) {
                                 const text = await navigator.clipboard.readText();
                                 const bundle = parseAuthBundle(text);
-                                const clipboardExpired = !!bundle.token && isTokenExpiredLocally(bundle.token);
-                                if (bundle.token && (!clipboardExpired || bundle.refreshToken || getRefreshToken())) {
+                                const incomingRefreshInfo = refreshTokenInfo(bundle.refreshToken || '');
+                                let currentToken = '';
+                                try { currentToken = extractToken(getToken() || ''); } catch (e) {}
+                                const sameToken = !!bundle.token && !!currentToken && bundle.token === currentToken;
+                                if (bundle.token && (incomingRefreshInfo.usable || (sameToken && hasUsableRefreshToken()))) {
                                     return gtxAcceptTokenText(text);
+                                }
+                                if (bundle.token) {
+                                    clipboardWarning = 'Clipboard mới có access token, chưa có refreshToken dùng được nên app không tự nhận để tránh hết hạn sau khoảng 15 phút.';
                                 }
                             }
                         } catch (e) {}
-                        return gtxPromptNewToken((reason ? (reason + '\n\n') : '') + 'Dán token (eyJ...) hoặc gói token+refreshToken để bật tự gia hạn:');
+                        return gtxPromptNewToken((reason ? (reason + '\n\n') : '') + (clipboardWarning ? (clipboardWarning + String.fromCharCode(10, 10)) : '') + 'Dán GÓI JSON gồm token + refreshToken + tokenHeader để bật tự gia hạn. Nếu chỉ dán token eyJ..., app chỉ chạy đến khi access token hết hạn (thường khoảng 15 phút):');
                     }
                     async function gtxBalanceClicked() {
                         let tok = '';
@@ -5412,7 +5499,13 @@ body {
                         for (let i = 0; i < list.length; i++) { if (list[i]) map.set(gtxBetRowKey(list[i]), list[i]); }
                         gtxBetHistoryRows = Array.from(map.values()).sort(gtxBetRowCmp).slice(0, GTX_SHOW);
                         try { betManualCheckResults(gtxBetHistoryRows); } catch (e) {}
-                        try { bsFormulaAuditRecent30(gtxBetHistoryRows, { source: 'history-merge' }); } catch (e) {}
+                        try {
+                            bsFormulaAuditRecent30(gtxBetHistoryRows, {
+                                source: 'app-open',
+                                startupOnce: true,
+                                forceScan: true
+                            });
+                        } catch (e) {}
                         renderBetTx(null);
                     }
                     async function gtxLoadBetHistory500() {
@@ -5549,6 +5642,7 @@ body {
                     let betWinAutoStartKey = '';
                     let betWinAutoStartDeadline = 0;
                     let betWinAutoStartLastKey = '';
+                    let betWinAutoStartWaitReason = '';
                     let betResultPopupTimer = null;
                     let betResultPopupNextTimer = null;
                     let betResultPopupShowing = false;
@@ -5626,7 +5720,7 @@ body {
                     }
                     function betSummaryText() {
                         if (betAuto.active) return betAutoProgressText(false);
-                        if (betTokenNeedsSetupUi()) return '🔑 Token hết hạn · bấm “Nhập token” để dán token mới';
+                        if (betTokenNeedsSetupUi()) return '🔑 ' + betTokenProblemReason() + ' Bấm “Nhập token” để dán gói JSON token + refreshToken + tokenHeader.';
                         let currentLevel = 1;
                         let guide = null;
                         try {
@@ -6269,17 +6363,25 @@ body {
                         try {
                             await sleep(650);
                             let ok = false;
-                            for (let attempt = 0; attempt < 5; attempt++) {
+                            const takeStartedAt = Date.now();
+                            while (!ok && Date.now() - takeStartedAt < 45000) {
                                 try {
                                     ok = !!(await lay4SoMoiNhat(null, { fromWin: true, expectedIssue: issue }));
                                 } catch (e) { ok = false; }
                                 if (ok) break;
-                                if (attempt < 4) await sleep(800);
+                                await sleep(800);
                             }
                             if (ok) {
                                 try { betRender(); } catch (e) {}
                                 if (opts.autoStartCycle !== false) {
-                                    try { betScheduleAutoCycleAfterWin(key); } catch (e) {}
+                                    let winPrefix = '';
+                                    try { winPrefix = (segPrefixDigits() || []).join(''); } catch (e) {}
+                                    try {
+                                        betScheduleAutoCycleAfterWin(key, {
+                                            issue: issue,
+                                            prefix: winPrefix
+                                        });
+                                    } catch (e) {}
                                 }
                             } else {
                                 try { setTakeLatest4Status('err'); } catch (e) {}
@@ -6431,7 +6533,6 @@ body {
                                 );
                             } catch (e) {}
                         }
-                        try { bsFormulaAuditRecent30(list, { source: 'settlement' }); } catch (e) {}
                         return found;
                     }
                     async function betManualPollResults() {
@@ -6512,15 +6613,28 @@ body {
                         try { tok = extractToken(getToken() || ''); } catch (e) {}
                         if (!tok) return 'Trang hiện tại chưa có token trong bộ nhớ/Firebase.';
                         if (isTokenExpiredLocally(tok)) {
+                            const info = refreshTokenInfo();
+                            if (!info.present) return 'Token đã hết hạn ' + tokenExpiryText(tok) + ' · thiếu refreshToken.';
+                            if (!info.usable) return 'Token đã hết hạn ' + tokenExpiryText(tok) + ' · ' + info.text + '.';
                             return 'Token đã hết hạn ' + tokenExpiryText(tok)
-                                + (getRefreshToken()
-                                    ? (' · tự gia hạn chưa được' + (lastRefreshTokenError ? (': ' + lastRefreshTokenError) : ''))
-                                    : ' · thiếu refreshToken') + '.';
+                                + ' · có refreshToken nhưng tự gia hạn chưa được'
+                                + (lastRefreshTokenError ? (': ' + lastRefreshTokenError) : '') + '.';
                         }
                         let alive = true;
                         try { alive = (typeof tokenAlive !== 'function') || tokenAlive(); } catch (e) {}
                         if (tok === gtxSessionDeadToken || !alive) return 'API vừa từ chối phiên token hiện tại.';
                         return 'Chưa xác nhận lại được token hiện tại.';
+                    }
+                    function betTokenIssueShortText() {
+                        let tok = '';
+                        try { tok = extractToken(getToken() || ''); } catch (e) {}
+                        if (!tok) return 'Chờ token';
+                        const info = refreshTokenInfo();
+                        if (!info.present) return 'Thiếu refreshToken';
+                        if (info.truncated) return 'refreshToken bị cắt';
+                        if (info.expired) return 'refreshToken hết hạn';
+                        if (lastRefreshTokenError) return 'Gia hạn lỗi: ' + lastRefreshTokenError;
+                        return 'Token hết hạn';
                     }
                     async function betRecoverTokenBeforePrompt() {
                         try { await ensureFreshToken(60000); } catch (e) {}
@@ -6751,15 +6865,25 @@ body {
                         }
                         const chip = document.getElementById('btnTokenSetup');
                         if (chip) {
-                            const on = !!getRefreshToken();
+                            const refreshInfo = refreshTokenInfo();
+                            const on = !!refreshInfo.usable;
                             const needsToken = betTokenNeedsSetupUi();
-                            const label = needsToken ? '🔑 Nhập token' : ('↻ Gia hạn: ' + (on ? 'Bật' : 'Tắt'));
+                            const label = needsToken
+                                ? '🔑 Nhập token'
+                                : (on ? '↻ Gia hạn: Bật' : ('⚠️ Gia hạn: ' + (refreshInfo.present ? 'Lỗi' : 'Tắt')));
                             if (chip.textContent !== label) chip.textContent = label;
                             chip.classList.toggle('needs-token', needsToken);
                             chip.classList.toggle('on', !needsToken && on);
-                            chip.title = needsToken
-                                ? 'Token hết hạn/chưa có — bấm để dán token mới'
-                                : 'Bấm để dán/cập nhật token game';
+                            if (needsToken) {
+                                chip.title = betTokenProblemReason() + ' Bấm để dán gói JSON token + refreshToken + tokenHeader.';
+                            } else if (on) {
+                                chip.title = 'Tự gia hạn đang bật · ' + refreshInfo.text + ' · bấm để dán/cập nhật gói token';
+                            } else {
+                                let currentTok = '';
+                                try { currentTok = extractToken(getToken() || ''); } catch (e) {}
+                                chip.title = '⚠️ ' + refreshInfo.text + ' · access token ' + tokenExpiryText(currentTok)
+                                    + ' · bấm để dán gói JSON token + refreshToken + tokenHeader';
+                            }
                             if (note) note.classList.toggle('is-token-action', needsToken);
                         }
                         try { betSyncBettingClosedControls(); } catch (e) {}
@@ -7089,7 +7213,7 @@ body {
                             token = extractToken((ensured && ensured !== '__timeout__') ? ensured : (getToken() || ''));
                         } catch (e) {}
                         if (!token || isTokenExpiredLocally(token)) {
-                            betSetIssueError(token ? 'Token hết hạn' : 'Chờ token', 5000);
+                            betSetIssueError(betTokenIssueShortText(), 5000);
                             betRenderCountdown();
                             betScheduleIssueRefresh(2500);
                             return false;
@@ -7103,7 +7227,7 @@ body {
                             let hasRefresh = false;
                             try { hasRefresh = !!getRefreshToken(); } catch (e) {}
                             if (!force && !hasRefresh) {
-                                betSetIssueError('Token hết hạn', 5000);
+                                betSetIssueError(betTokenIssueShortText(), 5000);
                                 betRenderCountdown();
                                 betScheduleIssueRefresh(2500);
                                 return false;
@@ -7157,7 +7281,7 @@ body {
                         if (lastError) {
                             if (gtxIsSessionError(lastError) || (lastError && lastError.kind === 'auth')) {
                                 try { gtxShowTokenProblem(gtxErrText(lastError)); } catch (e) {}
-                                betSetIssueError('Token hết hạn', 5000);
+                                betSetIssueError(betTokenIssueShortText(), 5000);
                             } else {
                                 betSetIssueError('Lỗi kỳ: ' + gtxErrText(lastError), 4500);
                             }
@@ -8028,6 +8152,7 @@ body {
                         btn.setAttribute('data-cycle-step', String(step));
                         btn.setAttribute('data-cycle-closed', startClosed ? '1' : '0');
                         btn.setAttribute('data-win-auto-start-pending', winAutoPending ? '1' : '0');
+                        btn.setAttribute('data-win-auto-start-reason', winAutoPending ? String(betWinAutoStartWaitReason || '') : '');
                         btn.setAttribute('data-cycle-seconds-left', String(secondsLeft));
                         btn.setAttribute('aria-pressed', active ? 'true' : 'false');
                         btn.setAttribute('aria-disabled', btn.disabled ? 'true' : 'false');
@@ -8035,7 +8160,8 @@ body {
                         btn.title = active
                             ? ('Đang tự chạy dãy ' + (betCycle.patternKey || '--') + ' · ô ' + (step + 1) + '/7 · mức ' + level + 'K · bấm để dừng')
                             : (winAutoPending
-                                ? 'Đã thắng và đã lấy bộ 3 số mới · app đang chờ dãy 7 ô/kỳ cược sẵn sàng rồi tự bật TỰ CHẠY CHU KỲ.'
+                                ? ('Đã thắng và đã lấy bộ 3 số mới · app đang chờ rồi sẽ tự bấm TỰ CHẠY CHU KỲ.'
+                                    + (betWinAutoStartWaitReason ? (' Đang chờ: ' + betWinAutoStartWaitReason + '.') : ''))
                                 : (startClosed
                                     ? ('Đang bị mờ/khóa vì kỳ hiện tại còn ' + secondsLeft + 's · chờ kỳ mới bắt đầu đếm thì nút mới sáng để bấm')
                                     : 'Tự bấm LỚN/NHỎ theo dãy 7 ô, rồi tự bấm mức cược tương ứng. Khi thắng, app tự lấy bộ 3 số mới và tự bật lại chu kỳ; thua ở 180K thì báo chu kỳ thất bại.'));
@@ -8116,6 +8242,7 @@ body {
                         }
                         betWinAutoStartKey = '';
                         betWinAutoStartDeadline = 0;
+                        betWinAutoStartWaitReason = '';
                         try { betCycleRenderButton(); } catch (e) {}
                     }
                     function betCancelWinAutoStart(reason) {
@@ -8126,7 +8253,8 @@ body {
                         }
                         return hadPending;
                     }
-                    function betScheduleAutoCycleAfterWin(key) {
+                    function betScheduleAutoCycleAfterWin(key, opts) {
+                        opts = opts || {};
                         const scheduleKey = String(key || '').trim();
                         if (!scheduleKey || betWinAutoStartLastKey === scheduleKey) return false;
                         if (betWinAutoStartTimer) {
@@ -8136,7 +8264,15 @@ body {
                         betWinAutoStartLastKey = scheduleKey;
                         betWinAutoStartKey = scheduleKey;
                         betWinAutoStartDeadline = Date.now() + 90000;
-                        let startAttempts = 0;
+                        betWinAutoStartWaitReason = 'đang chờ dãy 7 ô của bộ số mới và kỳ cược sẵn sàng';
+                        const expectedPrefix = String(opts.prefix || '').replace(/\D/g, '');
+                        let stableKey = '';
+                        let stableSince = 0;
+                        let lastGuideRetryAt = 0;
+                        let guideRetryBusy = false;
+                        let lastStartAttemptAt = 0;
+                        let lastWaitStatusAt = Date.now();
+                        let indexMismatchSince = 0;
                         try {
                             betSetStatus('🎉 Đã thắng · đã lấy bộ số mới vào ô nhập · đang chờ dãy 7 ô và kỳ cược sẵn sàng để tự bật TỰ CHẠY CHU KỲ', 'ok');
                             betCycleRenderButton();
@@ -8148,8 +8284,20 @@ body {
                                 if (betWinAutoStartKey !== scheduleKey) return;
                                 betWinAutoStartTimer = setTimeout(tick, Math.max(250, Number(ms) || 500));
                             };
+                            const waitFor = function (reason, ms) {
+                                betWinAutoStartWaitReason = String(reason || 'đang chờ đủ điều kiện');
+                                try { betCycleRenderButton(); } catch (e) {}
+                                if (Date.now() - lastWaitStatusAt > 5000) {
+                                    lastWaitStatusAt = Date.now();
+                                    try {
+                                        betSetStatus('🎉 Đã thắng · đã lấy bộ số mới · chưa tự chạy vì ' + betWinAutoStartWaitReason + ' · app vẫn đang chờ để tự bấm nút', 'ok');
+                                    } catch (e) {}
+                                }
+                                wait(ms);
+                            };
                             if (Date.now() > betWinAutoStartDeadline) {
-                                betCancelWinAutoStart('🎉 Đã lấy bộ số mới nhưng chưa đủ điều kiện tự bật TỰ CHẠY CHU KỲ trong 90 giây · hãy bấm nút thủ công');
+                                const lastReason = betWinAutoStartWaitReason || 'chưa đủ điều kiện';
+                                betCancelWinAutoStart('🎉 Đã lấy bộ số mới nhưng sau 90 giây vẫn chưa tự bật TỰ CHẠY CHU KỲ · lý do cuối: ' + lastReason + ' · hãy bấm nút thủ công');
                                 return;
                             }
                             if (betCycle.active) {
@@ -8161,13 +8309,15 @@ body {
                                 return;
                             }
                             if (document.hidden || betWinTakeLatestBusy || betPlacing || betResultPopupShowing || betResultPopupQueue.length) {
-                                wait(650);
+                                waitFor(document.hidden
+                                    ? 'tab/app đang bị ẩn'
+                                    : (betWinTakeLatestBusy ? 'đang hoàn tất lấy bộ số mới' : 'popup/lệnh hiện tại chưa xử lý xong'), 650);
                                 return;
                             }
                             let pendingWatcher = false;
                             try { pendingWatcher = !!betManualHasPendingWatcher(); } catch (e) {}
                             if (pendingWatcher) {
-                                wait(650);
+                                waitFor('vẫn còn lệnh đang chờ kết quả', 650);
                                 return;
                             }
                             if (betSel) {
@@ -8177,24 +8327,77 @@ body {
                             let suggestedIndex = 0;
                             try { suggestedIndex = Number(betManualSuggestedLoad()) || 0; } catch (e) {}
                             if (suggestedIndex !== 0) {
+                                if (!indexMismatchSince) indexMismatchSince = Date.now();
+                                if (Date.now() - indexMismatchSince < 5000) {
+                                    waitFor('mức cược đang chờ quay về 1K', 600);
+                                    return;
+                                }
                                 betCancelWinAutoStart('🎉 Đã lấy bộ số mới nhưng mức cược chưa quay về 1K · chưa tự bật TỰ CHẠY CHU KỲ');
                                 return;
                             }
                             let secondsLeft = 0;
                             try { secondsLeft = betSecondsLeft(); } catch (e) {}
                             if (!betIssue || secondsLeft <= BET_CLOSE_SECONDS) {
-                                try { betCycleRenderButton(); } catch (e) {}
-                                wait(600);
+                                waitFor(!betIssue ? 'chưa đồng bộ kỳ hiện tại' : ('kỳ hiện tại còn ' + secondsLeft + 's, phải chờ kỳ mới'), 600);
+                                return;
+                            }
+                            let currentPrefix = '';
+                            try { currentPrefix = (segPrefixDigits() || []).join(''); } catch (e) {}
+                            if (expectedPrefix && currentPrefix !== expectedPrefix) {
+                                stableKey = '';
+                                stableSince = 0;
+                                waitFor('đang chờ đúng bộ số ' + expectedPrefix + ' trong ô nhập', 600);
                                 return;
                             }
                             let guide = null;
                             try { guide = betPatternGuideState(); } catch (e) {}
                             if (!guide || !guide.ready || !guide.pattern || guide.pattern.length !== BET_MULTIPLES_CUSTOM.length) {
-                                wait(600);
+                                stableKey = '';
+                                stableSince = 0;
+                                const guideRetryNow = Date.now();
+                                if (!guideRetryBusy && guideRetryNow - lastGuideRetryAt >= 2500) {
+                                    lastGuideRetryAt = guideRetryNow;
+                                    guideRetryBusy = true;
+                                    try {
+                                        const guideRetry = findSegmentsFromInput();
+                                        if (guideRetry && typeof guideRetry.then === 'function') {
+                                            guideRetry.then(function () {
+                                                guideRetryBusy = false;
+                                                try { betSyncPatternGuide(true); } catch (e) {}
+                                            }, function () { guideRetryBusy = false; });
+                                        } else {
+                                            guideRetryBusy = false;
+                                            try { betSyncPatternGuide(true); } catch (e) {}
+                                        }
+                                    } catch (e) { guideRetryBusy = false; }
+                                }
+                                waitFor('dãy 7 ô của bộ số mới chưa sẵn sàng', 600);
                                 return;
                             }
                             if (Number(guide.index) !== 0) {
+                                if (!indexMismatchSince) indexMismatchSince = Date.now();
+                                if (Date.now() - indexMismatchSince < 5000) {
+                                    waitFor('dãy đang chờ quay về ô 1/7', 600);
+                                    return;
+                                }
                                 betCancelWinAutoStart('🎉 Đã lấy bộ số mới nhưng dãy chưa ở ô 1/7 · chưa tự bật TỰ CHẠY CHU KỲ');
+                                return;
+                            }
+                            indexMismatchSince = 0;
+                            let sourceKey = currentPrefix + '|' + guide.pattern.join('') + '|' + String(guide.formula || 1);
+                            try {
+                                sourceKey += '|' + String(bsTopIssue || '')
+                                    + '|' + (bsBaseDigits || []).join('')
+                                    + '|' + (bsCurDigits || []).join('');
+                            } catch (e) {}
+                            if (sourceKey !== stableKey) {
+                                stableKey = sourceKey;
+                                stableSince = Date.now();
+                                waitFor('dãy 7 ô mới đang ổn định', 700);
+                                return;
+                            }
+                            if (Date.now() - stableSince < 700) {
+                                waitFor('dãy 7 ô mới đang ổn định', 350);
                                 return;
                             }
                             try {
@@ -8204,18 +8407,37 @@ body {
                                     return;
                                 }
                             } catch (e) {}
-                            startAttempts++;
+                            if (Date.now() - lastStartAttemptAt < 2500) {
+                                waitFor('đang chờ thử bấm lại nút TỰ CHẠY CHU KỲ', 500);
+                                return;
+                            }
+                            lastStartAttemptAt = Date.now();
+                            betWinAutoStartWaitReason = 'đang tự bấm nút TỰ CHẠY CHU KỲ';
                             let started = false;
-                            try { started = !!betCycleStart(); } catch (e) {}
+                            try {
+                                let cycleBtn = null;
+                                try { cycleBtn = document.getElementById('btnAutoCycle'); } catch (e) {}
+                                try { betCycleRenderButton(); } catch (e) {}
+                                if (cycleBtn && !cycleBtn.disabled && typeof cycleBtn.click === 'function') {
+                                    cycleBtn.click();
+                                    started = !!betCycle.active;
+                                } else {
+                                    started = !!betCycleStart();
+                                }
+                            } catch (e) {
+                                started = !!betCycle.active;
+                                if (!started) {
+                                    try { started = !!betCycleStart(); } catch (e2) {}
+                                }
+                            }
                             if (started && betCycle.active) {
                                 betClearWinAutoStart();
                                 return;
                             }
-                            if (startAttempts < 4 && Date.now() < betWinAutoStartDeadline && !betCycle.active) {
-                                wait(800);
-                                return;
-                            }
-                            betCancelWinAutoStart('🎉 Đã lấy bộ số mới nhưng chưa thể tự bật TỰ CHẠY CHU KỲ · hãy bấm nút thủ công');
+                            stableKey = '';
+                            stableSince = 0;
+                            waitFor('nút TỰ CHẠY CHU KỲ chưa bật được, đang thử lại', 900);
+                            return;
                         };
                         betWinAutoStartTimer = setTimeout(tick, 350);
                         return true;
@@ -8237,14 +8459,6 @@ body {
                             try { betCycleRenderButton(); } catch (e) {}
                             return false;
                         }
-                        try {
-                            bsFormulaAuditRecent30(gtxBetHistoryRows, {
-                                source: 'cycle-start',
-                                refresh: 'immediate',
-                                forceScan: true,
-                                announce: false
-                            });
-                        } catch (e) {}
                         let guide = null;
                         try { guide = betPatternGuideState(); } catch (e) {}
                         if (!guide || !guide.ready || !guide.pattern || guide.pattern.length !== BET_MULTIPLES_CUSTOM.length) {
@@ -10570,6 +10784,9 @@ body {
                     let bsFormulaAuditLoaded = false;
                     let bsFormulaAuditLastSignature = '';
                     let bsFormulaAuditLastRunAt = 0;
+                    let bsFormulaAuditStartupDone = false;
+                    let bsFormulaAuditStartupDoneAcct = '';
+                    let bsFormulaAuditStartupDoneAt = 0;
                     function bsFormulaNormalize(mode) {
                         return Number(mode) === 2 ? 2 : 1;
                     }
@@ -10934,6 +11151,40 @@ body {
                     }
                     function bsFormulaAuditRecent30(rows, opts) {
                         opts = opts || {};
+                        const startupOnce = !!opts.startupOnce || opts.source === 'app-open';
+                        if (!startupOnce) {
+                            return { skipped: 'not-app-open', found: false, changed: false, scanned: 0, source: String(opts.source || '') };
+                        }
+                        let startupAcct = '';
+                        try { startupAcct = betManualAccountKey(); } catch (e) {}
+                        if (bsFormulaAuditStartupDone) {
+                            if (!startupAcct || !bsFormulaAuditStartupDoneAcct || startupAcct === bsFormulaAuditStartupDoneAcct) {
+                                return {
+                                    skipped: 'app-open-done',
+                                    found: false,
+                                    changed: false,
+                                    scanned: 0,
+                                    source: String(opts.source || ''),
+                                    startupOnce: true,
+                                    startupDoneAt: bsFormulaAuditStartupDoneAt
+                                };
+                            }
+                            // Đổi sang tài khoản khác ngay trong cùng một lần mở trang:
+                            // cho phép đúng một lần rà soát khởi động cho tài khoản mới.
+                            bsFormulaAuditStartupDone = false;
+                            bsFormulaAuditStartupDoneAcct = '';
+                            bsFormulaAuditStartupDoneAt = 0;
+                            bsFormulaAuditLastSignature = '';
+                            bsFormulaAuditLastRunAt = 0;
+                        }
+                        const finishStartupAudit = function (result) {
+                            bsFormulaAuditStartupDone = true;
+                            bsFormulaAuditStartupDoneAcct = startupAcct || '';
+                            bsFormulaAuditStartupDoneAt = Date.now();
+                            result.startupOnce = true;
+                            result.startupDoneAt = bsFormulaAuditStartupDoneAt;
+                            return result;
+                        };
                         const boundary = opts.ignoreBoundary ? '' : bsFormulaAuditBoundary();
                         if (boundary) return { skipped: boundary, found: false, changed: false, scanned: 0 };
                         let list = [];
@@ -10998,11 +11249,11 @@ body {
                                 }
                             }
                             if (placedFormula !== 1 && placedFormula !== 2) {
-                                return {
+                                return finishStartupAudit({
                                     found: true, unknownFormula: true, changed: false,
                                     key: txKey, placedIndex: placedIndex, scanned: list.length,
                                     source: String(opts.source || '')
-                                };
+                                });
                             }
                             const desired = placedFormula === 1 ? 2 : 1;
                             const current = bsFormulaCurrent();
@@ -11051,7 +11302,7 @@ body {
                                         + ' · chu kỳ mới dùng Công thức ' + desired, 'ok');
                                 } catch (e) {}
                             }
-                            return {
+                            return finishStartupAudit({
                                 found: true,
                                 changed: !!changed,
                                 refreshed: !!refreshed,
@@ -11063,7 +11314,7 @@ body {
                                 scanned: list.length,
                                 inference: inference,
                                 source: String(opts.source || '')
-                            };
+                            });
                         }
                         try {
                             bsFormulaAuditState.checkedAt = now;
@@ -11071,7 +11322,7 @@ body {
                             bsFormulaAuditState.source = String(opts.source || 'audit-30');
                             bsFormulaAuditSave();
                         } catch (e) {}
-                        return { found: false, changed: false, scanned: list.length, source: String(opts.source || '') };
+                        return finishStartupAudit({ found: false, changed: false, scanned: list.length, source: String(opts.source || '') });
                     }
                     function bsFormulaOnBetOutcome(win, watcher) {
                         if (!win || !watcher) return null;
@@ -11424,16 +11675,17 @@ body {
                                         betSideBlinkStopped = false;
                                     }
                                 } catch (e) {}
-                                try {
-                                    bsFormulaAuditRecent30(gtxBetHistoryRows, {
-                                        source: 'lay-so',
-                                        refresh: 'defer',
-                                        forceScan: true,
-                                        announce: false
-                                    });
-                                } catch (e) {}
                                 try { refreshBigSmall(); } catch (e) {}
-                                findSegmentsFromInput();
+                                const segSearchAfterFill = findSegmentsFromInput();
+                                if (opts.fromWin && segSearchAfterFill && typeof segSearchAfterFill.then === 'function') {
+                                    try {
+                                        await Promise.race([
+                                            segSearchAfterFill.catch(function () { return false; }),
+                                            sleep(10000)
+                                        ]);
+                                    } catch (e) {}
+                                    try { betSyncPatternGuide(true); } catch (e) {}
+                                }
                                 try { betRender(); } catch (e) {}
                                 // bấm nút là để khỏi gõ tay -> thu bàn phím lại (nếu con trỏ đang ở ô nhập)
                                 try { const ae = document.activeElement; if (ae && /^segD[0-9]+$/.test(ae.id || '')) ae.blur(); } catch (e) {}
@@ -11741,18 +11993,19 @@ body {
                                 info.style.color = '#f87171';
                                 info.textContent = '⚠️ Nhập đủ ' + segPrefixLen() + ' ô, mỗi ô một số từ 0 đến 9.';
                             }
-                            return;
+                            return Promise.resolve(false);
                         }
                         dataTableSeg = { prefix: vals, len: vals.length };
                         // có kho trong máy -> tra ngay trên máy (nhanh nhất)
-                        if (gameArchive.length >= SEG_TOTAL) { dataTableFbSegs = null; renderDataTable('segments'); return; }
+                        if (gameArchive.length >= SEG_TOTAL) { dataTableFbSegs = null; renderDataTable('segments'); return Promise.resolve(true); }
                         // KHÔNG có kho trong máy -> tra TRỰC TIẾP trên Firebase (chỉ đọc 1 doc nhỏ)
-                        if (!fbDB) { dataTableFbSegs = null; renderDataTable('segments'); return; }
+                        if (!fbDB) { dataTableFbSegs = null; renderDataTable('segments'); return Promise.resolve(true); }
                         if (info) { info.style.color = '#94a3b8'; info.textContent = '☁️ Đang tra trên Firebase…'; }
-                        segSearchFirebase(vals).then(function (r) {
+                        return segSearchFirebase(vals).then(function (r) {
                             if (r && !r.missing) {
                                 dataTableFbSegs = r.segs;
                                 renderDataTable('segments');
+                                return true;
                             } else {
                                 dataTableFbSegs = null;
                                 renderDataTable('segments');
@@ -11760,10 +12013,12 @@ body {
                                     info.style.color = '#f87171';
                                     info.textContent = '☁️ Chưa có chỉ mục đoạn số trên Firebase — bấm "⬇️ Tải 100 trang" (hoặc "☁️ Cập nhật chỉ mục") để dựng 1 lần, sau này tra liền không cần tải nữa.';
                                 }
+                                return false;
                             }
                         }).catch(function () {
                             dataTableFbSegs = null; renderDataTable('segments');
                             if (info) { info.style.color = '#f87171'; info.textContent = '⚠️ Không tra được trên Firebase.'; }
+                            return false;
                         });
                     }
                     function renderDataTable(mode) {
@@ -13034,4 +13289,4 @@ body {
                         });
                 </script>
    
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4c54bc6ad04c5e8',t:'MTc5MjMwMjk0Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4d8a7ea18b8855d',t:'MTc5MjUwNTk0OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4e2128c6c51e2ff',t:'MTc5MjYwNDY4OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4c54bc6ad04c5e8',t:'MTc5MjMwMjk0Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4d8a7ea18b8855d',t:'MTc5MjUwNTk0OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4e25fe7ef5609d0',t:'MTc5MjYwNzg1Nw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
