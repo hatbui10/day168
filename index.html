@@ -2634,6 +2634,19 @@ body {
   animation: betCycleButtonPulse 1.15s ease-in-out infinite alternate;
 }
 #dataTablePanel #betPlacePanel button#btnAutoCycle.is-stopping { filter: saturate(.72) brightness(.88); animation: none; }
+#dataTablePanel #betPlacePanel button#btnAutoCycle.is-win-auto-start-pending {
+  border-color: rgba(254,240,138,.96) !important;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(255,255,255,.34), rgba(255,255,255,0) 42%),
+    linear-gradient(135deg,#ca8a04 0%,#16a34a 58%,#0f766e 100%) !important;
+  box-shadow:
+    0 5px 0 #713f12,
+    0 0 20px rgba(250,204,21,.34),
+    0 11px 22px rgba(0,0,0,.34),
+    inset 0 1px 0 rgba(255,255,255,.38),
+    inset 0 -7px 13px rgba(0,0,0,.24) !important;
+  animation: betCycleButtonPulse 1.15s ease-in-out infinite alternate;
+}
 #dataTablePanel #betPlacePanel button#btnAutoCycle:disabled { cursor: not-allowed; opacity: .55; filter: grayscale(.35) brightness(.78); box-shadow: none; animation: none; }
 /* Khi kỳ còn <= 6s: nút bắt đầu tự chạy bị che mờ/khóa cho tới kỳ mới. */
 #dataTablePanel #betPlacePanel button#btnAutoCycle.is-cycle-closed:disabled {
@@ -3246,7 +3259,7 @@ body {
                             <div class="bet-bigsmall" id="betBigSmallRow" aria-label="Chọn Lớn hoặc Nhỏ"></div>
                             <div class="bet-chip-row bet-multiple-row" id="betMultipleRow" aria-label="Chạm mức tiền để đặt cược ngay"></div>
                             <div id="betPlaceStatus" class="bet-status" aria-live="polite">--</div>
-                            <button type="button" id="btnAutoCycle" title="Tự bấm LỚN/NHỎ theo ô đang sáng trong dãy 7 ô đã xáo trộn, rồi tự bấm mức cược tương ứng. Thắng thì dừng và quay về 1K; thua ở 180K thì báo chu kỳ thất bại. Bấm lần nữa để dừng.">▶ TỰ CHẠY CHU KỲ</button>
+                            <button type="button" id="btnAutoCycle" title="Tự bấm LỚN/NHỎ theo ô đang sáng trong dãy 7 ô, rồi tự bấm mức cược tương ứng. Khi thắng, app tự lấy bộ 3 số mới và tự bật lại chu kỳ khi dãy/kỳ đã sẵn sàng; thua ở 180K thì báo chu kỳ thất bại. Bấm lần nữa để dừng.">▶ TỰ CHẠY CHU KỲ</button>
                             <div id="betResultPopupBackdrop" aria-hidden="true"></div>
                             <div id="betResultPopup" aria-live="polite" aria-hidden="true"><div id="betResultPopupTitle">THẮNG</div><div id="betResultPopupDetail"></div></div>
                             <div id="betWaitOverlay" aria-live="polite" aria-hidden="true"><div class="bet-wait-card"><div id="betWaitTitle">ĐÃ ĐẶT</div><div id="betWaitClock"><span id="betWaitSeconds">--</span><small>GIÂY</small></div><div id="betWaitDetail">Đang chờ kết quả…</div><button type="button" id="betWaitHideBtn" title="Chỉ dùng khi chờ quá lâu để kiểm tra token hoặc mạng">Ẩn tạm để kiểm tra token/mạng</button></div></div>
@@ -5532,6 +5545,10 @@ body {
                     let betManualPollLastTry = 0;
                     let betWinTakeLatestBusy = false;
                     let betWinTakeLatestLastKey = '';
+                    let betWinAutoStartTimer = null;
+                    let betWinAutoStartKey = '';
+                    let betWinAutoStartDeadline = 0;
+                    let betWinAutoStartLastKey = '';
                     let betResultPopupTimer = null;
                     let betResultPopupNextTimer = null;
                     let betResultPopupShowing = false;
@@ -6242,7 +6259,8 @@ body {
                         }
                         return null;
                     }
-                    async function betTakeLatestAfterWin(watcher) {
+                    async function betTakeLatestAfterWin(watcher, opts) {
+                        opts = opts || {};
                         const issue = String((watcher && watcher.issue) || '').trim();
                         const key = String((watcher && watcher.oid) || issue).trim();
                         if (!issue || !key || betWinTakeLatestBusy || betWinTakeLatestLastKey === key) return false;
@@ -6260,8 +6278,16 @@ body {
                             }
                             if (ok) {
                                 try { betRender(); } catch (e) {}
+                                if (opts.autoStartCycle !== false) {
+                                    try { betScheduleAutoCycleAfterWin(key); } catch (e) {}
+                                }
                             } else {
                                 try { setTakeLatest4Status('err'); } catch (e) {}
+                                if (opts.autoStartCycle !== false) {
+                                    try {
+                                        betSetStatus('🎉 Đã thắng nhưng chưa lấy được bộ 3 số mới · chưa tự bật TỰ CHẠY CHU KỲ', 'err');
+                                    } catch (e) {}
+                                }
                             }
                             return ok;
                         } finally {
@@ -6346,8 +6372,23 @@ body {
                                 }
                                 cycleFinalLoss = betCycleIsFinalLoss(outcome.win, w);
                             } catch (e) {}
-                            if (outcome.win && !winTakeWatcher) {
-                                winTakeWatcher = { oid: String(w.oid || ''), issue: String(w.issue || '') };
+                            if (outcome.win) {
+                                let winFromCycle = false;
+                                let winCycleStopRequested = false;
+                                try {
+                                    winFromCycle = !!betCycleMatchesWatcher(w);
+                                    winCycleStopRequested = !!(winFromCycle && betCycle.stopRequested);
+                                } catch (e) {}
+                                if (!winTakeWatcher) {
+                                    winTakeWatcher = {
+                                        oid: String(w.oid || ''),
+                                        issue: String(w.issue || ''),
+                                        fromCycle: winFromCycle,
+                                        autoStartCycle: !winCycleStopRequested
+                                    };
+                                } else if (winCycleStopRequested) {
+                                    winTakeWatcher.autoStartCycle = false;
+                                }
                             }
                             const baseNextText = cycleFinalLoss
                                 ? 'Đã dừng tự chạy · quay về 1K'
@@ -6375,7 +6416,9 @@ body {
                         if (changed) betManualSaveWatchers();
                         if (winTakeWatcher) {
                             try {
-                                const pWinTake = betTakeLatestAfterWin(winTakeWatcher);
+                                const pWinTake = betTakeLatestAfterWin(winTakeWatcher, {
+                                    autoStartCycle: winTakeWatcher.autoStartCycle !== false
+                                });
                                 if (pWinTake && pWinTake.catch) pWinTake.catch(function () {});
                             } catch (e) {}
                         }
@@ -7960,6 +8003,7 @@ body {
                         let secondsLeft = 0;
                         try { secondsLeft = betSecondsLeft(); } catch (e) {}
                         const startClosed = !!(!active && (!betIssue || secondsLeft <= BET_CLOSE_SECONDS));
+                        const winAutoPending = !!(!active && betWinAutoStartKey);
                         let label = '▶ TỰ CHẠY CHU KỲ';
                         if (active && betCycle.stopRequested) {
                             label = '⏹ SẼ DỪNG SAU LỆNH NÀY';
@@ -7967,26 +8011,34 @@ body {
                             label = '⏹ DỪNG · CHỜ Ô ' + (step + 1) + '/7 · ' + level + 'K';
                         } else if (active) {
                             label = '⏹ DỪNG · Ô ' + (step + 1) + '/7 · ' + level + 'K';
+                        } else if (winAutoPending && startClosed) {
+                            label = '▶ THẮNG · CHỜ KỲ MỚI ĐỂ TỰ CHẠY';
+                        } else if (winAutoPending) {
+                            label = '▶ THẮNG · SẮP TỰ CHẠY CHU KỲ';
                         } else if (startClosed) {
                             label = '▶ TỰ CHẠY CHU KỲ · CHỜ KỲ MỚI';
                         }
                         btn.classList.toggle('is-running', active);
                         btn.classList.toggle('is-stopping', !!(active && betCycle.stopRequested));
+                        btn.classList.toggle('is-win-auto-start-pending', winAutoPending);
                         btn.classList.toggle('is-cycle-closed', startClosed);
                         btn.disabled = !!(!active && (betAuto.starting || startClosed));
                         btn.setAttribute('data-cycle-active', active ? '1' : '0');
                         btn.setAttribute('data-cycle-phase', String(betCycle.phase || 'idle'));
                         btn.setAttribute('data-cycle-step', String(step));
                         btn.setAttribute('data-cycle-closed', startClosed ? '1' : '0');
+                        btn.setAttribute('data-win-auto-start-pending', winAutoPending ? '1' : '0');
                         btn.setAttribute('data-cycle-seconds-left', String(secondsLeft));
                         btn.setAttribute('aria-pressed', active ? 'true' : 'false');
                         btn.setAttribute('aria-disabled', btn.disabled ? 'true' : 'false');
                         if (btn.textContent !== label) btn.textContent = label;
                         btn.title = active
                             ? ('Đang tự chạy dãy ' + (betCycle.patternKey || '--') + ' · ô ' + (step + 1) + '/7 · mức ' + level + 'K · bấm để dừng')
-                            : (startClosed
-                                ? ('Đang bị mờ/khóa vì kỳ hiện tại còn ' + secondsLeft + 's · chờ kỳ mới bắt đầu đếm thì nút mới sáng để bấm')
-                                : 'Tự bấm LỚN/NHỎ theo dãy 7 ô đã xáo trộn, rồi tự bấm mức cược tương ứng. Thắng thì dừng và quay về 1K; thua ở 180K thì báo chu kỳ thất bại.');
+                            : (winAutoPending
+                                ? 'Đã thắng và đã lấy bộ 3 số mới · app đang chờ dãy 7 ô/kỳ cược sẵn sàng rồi tự bật TỰ CHẠY CHU KỲ.'
+                                : (startClosed
+                                    ? ('Đang bị mờ/khóa vì kỳ hiện tại còn ' + secondsLeft + 's · chờ kỳ mới bắt đầu đếm thì nút mới sáng để bấm')
+                                    : 'Tự bấm LỚN/NHỎ theo dãy 7 ô, rồi tự bấm mức cược tương ứng. Khi thắng, app tự lấy bộ 3 số mới và tự bật lại chu kỳ; thua ở 180K thì báo chu kỳ thất bại.'));
                     }
                     function betCycleStop(message, kind, clearSelection) {
                         if (!betCycle.active) {
@@ -8055,6 +8107,117 @@ body {
                             betCycleStop('⏹ Đã dừng chu kỳ: vị trí ô/mức cược đã thay đổi bên ngoài chu kỳ', 'err', true);
                             return false;
                         }
+                        return true;
+                    }
+                    function betClearWinAutoStart() {
+                        if (betWinAutoStartTimer) {
+                            clearTimeout(betWinAutoStartTimer);
+                            betWinAutoStartTimer = null;
+                        }
+                        betWinAutoStartKey = '';
+                        betWinAutoStartDeadline = 0;
+                        try { betCycleRenderButton(); } catch (e) {}
+                    }
+                    function betCancelWinAutoStart(reason) {
+                        const hadPending = !!(betWinAutoStartTimer || betWinAutoStartKey);
+                        betClearWinAutoStart();
+                        if (hadPending && reason) {
+                            try { betSetStatus(reason, 'err'); } catch (e) {}
+                        }
+                        return hadPending;
+                    }
+                    function betScheduleAutoCycleAfterWin(key) {
+                        const scheduleKey = String(key || '').trim();
+                        if (!scheduleKey || betWinAutoStartLastKey === scheduleKey) return false;
+                        if (betWinAutoStartTimer) {
+                            clearTimeout(betWinAutoStartTimer);
+                            betWinAutoStartTimer = null;
+                        }
+                        betWinAutoStartLastKey = scheduleKey;
+                        betWinAutoStartKey = scheduleKey;
+                        betWinAutoStartDeadline = Date.now() + 90000;
+                        let startAttempts = 0;
+                        try {
+                            betSetStatus('🎉 Đã thắng · đã lấy bộ số mới vào ô nhập · đang chờ dãy 7 ô và kỳ cược sẵn sàng để tự bật TỰ CHẠY CHU KỲ', 'ok');
+                            betCycleRenderButton();
+                        } catch (e) {}
+                        const tick = function () {
+                            if (betWinAutoStartKey !== scheduleKey) return;
+                            betWinAutoStartTimer = null;
+                            const wait = function (ms) {
+                                if (betWinAutoStartKey !== scheduleKey) return;
+                                betWinAutoStartTimer = setTimeout(tick, Math.max(250, Number(ms) || 500));
+                            };
+                            if (Date.now() > betWinAutoStartDeadline) {
+                                betCancelWinAutoStart('🎉 Đã lấy bộ số mới nhưng chưa đủ điều kiện tự bật TỰ CHẠY CHU KỲ trong 90 giây · hãy bấm nút thủ công');
+                                return;
+                            }
+                            if (betCycle.active) {
+                                betClearWinAutoStart();
+                                return;
+                            }
+                            if (betAuto.active || betAuto.starting) {
+                                betCancelWinAutoStart('🎉 Đã lấy bộ số mới nhưng chế độ tự động cũ đang hoạt động · chưa bật TỰ CHẠY CHU KỲ');
+                                return;
+                            }
+                            if (document.hidden || betWinTakeLatestBusy || betPlacing || betResultPopupShowing || betResultPopupQueue.length) {
+                                wait(650);
+                                return;
+                            }
+                            let pendingWatcher = false;
+                            try { pendingWatcher = !!betManualHasPendingWatcher(); } catch (e) {}
+                            if (pendingWatcher) {
+                                wait(650);
+                                return;
+                            }
+                            if (betSel) {
+                                betCancelWinAutoStart('🎉 Đã lấy bộ số mới · đã hủy tự bật TỰ CHẠY CHU KỲ vì bạn đang chọn cược thủ công');
+                                return;
+                            }
+                            let suggestedIndex = 0;
+                            try { suggestedIndex = Number(betManualSuggestedLoad()) || 0; } catch (e) {}
+                            if (suggestedIndex !== 0) {
+                                betCancelWinAutoStart('🎉 Đã lấy bộ số mới nhưng mức cược chưa quay về 1K · chưa tự bật TỰ CHẠY CHU KỲ');
+                                return;
+                            }
+                            let secondsLeft = 0;
+                            try { secondsLeft = betSecondsLeft(); } catch (e) {}
+                            if (!betIssue || secondsLeft <= BET_CLOSE_SECONDS) {
+                                try { betCycleRenderButton(); } catch (e) {}
+                                wait(600);
+                                return;
+                            }
+                            let guide = null;
+                            try { guide = betPatternGuideState(); } catch (e) {}
+                            if (!guide || !guide.ready || !guide.pattern || guide.pattern.length !== BET_MULTIPLES_CUSTOM.length) {
+                                wait(600);
+                                return;
+                            }
+                            if (Number(guide.index) !== 0) {
+                                betCancelWinAutoStart('🎉 Đã lấy bộ số mới nhưng dãy chưa ở ô 1/7 · chưa tự bật TỰ CHẠY CHU KỲ');
+                                return;
+                            }
+                            try {
+                                const ts = betTokenState();
+                                if (!ts.ok && !getRefreshToken()) {
+                                    betCancelWinAutoStart(betTokenProblemReason() + ' Chưa tự bật TỰ CHẠY CHU KỲ sau khi thắng.');
+                                    return;
+                                }
+                            } catch (e) {}
+                            startAttempts++;
+                            let started = false;
+                            try { started = !!betCycleStart(); } catch (e) {}
+                            if (started && betCycle.active) {
+                                betClearWinAutoStart();
+                                return;
+                            }
+                            if (startAttempts < 4 && Date.now() < betWinAutoStartDeadline && !betCycle.active) {
+                                wait(800);
+                                return;
+                            }
+                            betCancelWinAutoStart('🎉 Đã lấy bộ số mới nhưng chưa thể tự bật TỰ CHẠY CHU KỲ · hãy bấm nút thủ công');
+                        };
+                        betWinAutoStartTimer = setTimeout(tick, 350);
                         return true;
                     }
                     function betCycleStart() {
@@ -8134,6 +8297,7 @@ body {
                         return true;
                     }
                     function betCycleRequestStop() {
+                        try { betClearWinAutoStart(); } catch (e) {}
                         if (!betCycle.active) return false;
                         if (betCycle.phase === 'placing' || betCycle.phase === 'waiting' || betPlacing || betManualHasPendingWatcher()) {
                             betCycle.stopRequested = true;
@@ -8153,7 +8317,11 @@ body {
                         const placedStep = Math.max(0, Math.min(BET_MULTIPLES_CUSTOM.length - 1, Number(betCycle.stepIndex) || 0));
                         const placedLevel = betCycleLevelForStep(placedStep);
                         if (win) {
-                            betCycleStop('✅ Chu kỳ hoàn thành · đã thắng ở ô ' + (placedStep + 1) + '/7 · ' + placedLevel + 'K · quay về mức 1K', 'ok', true);
+                            const stopRequestedBeforeWin = !!betCycle.stopRequested;
+                            betCycleStop('✅ Chu kỳ hoàn thành · đã thắng ở ô ' + (placedStep + 1) + '/7 · ' + placedLevel + 'K · quay về mức 1K'
+                                + (stopRequestedBeforeWin
+                                    ? ' · đã dừng theo yêu cầu, chỉ lấy bộ số mới'
+                                    : ' · đang lấy bộ số mới và sẽ tự chạy chu kỳ tiếp theo'), 'ok', true);
                             return true;
                         }
                         if (betCycleIsFinalLoss(false, watcher)) {
@@ -12866,4 +13034,4 @@ body {
                         });
                 </script>
    
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4c54bc6ad04c5e8',t:'MTc5MjMwMjk0Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4d8a7ea18b8855d',t:'MTc5MjUwNTk0OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4e1de1e3b59dd36',t:'MTc5MjYwMjU0MQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4c54bc6ad04c5e8',t:'MTc5MjMwMjk0Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4d8a7ea18b8855d',t:'MTc5MjUwNTk0OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4e2128c6c51e2ff',t:'MTc5MjYwNDY4OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
