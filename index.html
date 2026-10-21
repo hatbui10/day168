@@ -5399,6 +5399,7 @@ body {
                         for (let i = 0; i < list.length; i++) { if (list[i]) map.set(gtxBetRowKey(list[i]), list[i]); }
                         gtxBetHistoryRows = Array.from(map.values()).sort(gtxBetRowCmp).slice(0, GTX_SHOW);
                         try { betManualCheckResults(gtxBetHistoryRows); } catch (e) {}
+                        try { bsFormulaAuditRecent30(gtxBetHistoryRows, { source: 'history-merge' }); } catch (e) {}
                         renderBetTx(null);
                     }
                     async function gtxLoadBetHistory500() {
@@ -6148,6 +6149,15 @@ body {
                         if (item.oid && betManualWatchers.some(function (x) { return x.oid === item.oid; })) return false;
                         betManualWatchers.push(item);
                         betManualSaveWatchers();
+                        try {
+                            if (item.formula === 1 || item.formula === 2) {
+                                bsFormulaLedgerUpsert(Object.assign({}, item, {
+                                    win: null,
+                                    settledAt: 0,
+                                    source: 'watcher'
+                                }));
+                            }
+                        } catch (e) {}
                         return true;
                     }
                     function betSetResultPopupBackdrop(on) {
@@ -6298,7 +6308,23 @@ body {
                             ].filter(Boolean).join(' · ');
                             const suggestion = betManualAdvanceSuggested(outcome.win, w);
                             let formulaSwitch = null;
-                            try { formulaSwitch = bsFormulaOnBetOutcome(outcome.win, w); } catch (e) {}
+                            try {
+                                const settledFormulaEntry = bsFormulaLedgerRecordOutcome(w, row, outcome.win);
+                                const formulaWatcher = Object.assign({}, w, {
+                                    formula: settledFormulaEntry ? settledFormulaEntry.formula : (w.formula || 0)
+                                });
+                                formulaSwitch = bsFormulaOnBetOutcome(outcome.win, formulaWatcher);
+                                if (formulaSwitch) {
+                                    bsFormulaAuditMark({
+                                        key: gtxBetRowKey(row),
+                                        formula: formulaSwitch.from,
+                                        to: formulaSwitch.to,
+                                        placedIndex: formulaSwitch.placedIndex,
+                                        source: 'realtime',
+                                        inference: settledFormulaEntry ? 'ledger' : 'watcher'
+                                    });
+                                }
+                            } catch (e) {}
                             let cycleFinalLoss = false;
                             try {
                                 if (!cycleOutcomeInfo && betCycleMatchesWatcher(w)) {
@@ -6362,6 +6388,7 @@ body {
                                 );
                             } catch (e) {}
                         }
+                        try { bsFormulaAuditRecent30(list, { source: 'settlement' }); } catch (e) {}
                         return found;
                     }
                     async function betManualPollResults() {
@@ -8047,6 +8074,14 @@ body {
                             try { betCycleRenderButton(); } catch (e) {}
                             return false;
                         }
+                        try {
+                            bsFormulaAuditRecent30(gtxBetHistoryRows, {
+                                source: 'cycle-start',
+                                refresh: 'immediate',
+                                forceScan: true,
+                                announce: false
+                            });
+                        } catch (e) {}
                         let guide = null;
                         try { guide = betPatternGuideState(); } catch (e) {}
                         if (!guide || !guide.ready || !guide.pattern || guide.pattern.length !== BET_MULTIPLES_CUSTOM.length) {
@@ -10351,10 +10386,22 @@ body {
                         }
                     };
                     const LS_BS_FORMULA_MODE = 'vn168_bs_formula_mode_v1';
+                    const LS_BS_FORMULA_LEDGER = 'vn168_bs_formula_ledger_v1';
+                    const LS_BS_FORMULA_AUDIT = 'vn168_bs_formula_audit_v1';
                     let bsFormulaMode = 1;
                     let bsFormulaAppliedMode = 1;
                     let bsFormulaModeLoaded = false;
+                    let bsFormulaModeUpdatedAt = 0;
                     let bsFormulaRefreshTimer = null;
+                    let bsFormulaLedger = [];
+                    let bsFormulaLedgerLoaded = false;
+                    let bsFormulaAuditState = {
+                        lastKey: '', lastFormula: 0, lastTo: 0, lastPlacedIndex: -1,
+                        checkedAt: 0, scanned: 0, source: '', inference: '', acct: ''
+                    };
+                    let bsFormulaAuditLoaded = false;
+                    let bsFormulaAuditLastSignature = '';
+                    let bsFormulaAuditLastRunAt = 0;
                     function bsFormulaNormalize(mode) {
                         return Number(mode) === 2 ? 2 : 1;
                     }
@@ -10367,9 +10414,11 @@ body {
                             try { raw = rawText ? JSON.parse(rawText) : null; } catch (e) {}
                             let savedMode = 1;
                             let savedAcct = '';
+                            let savedAt = 0;
                             if (raw && typeof raw === 'object') {
                                 savedMode = raw.mode;
                                 savedAcct = raw.acct ? String(raw.acct) : '';
+                                savedAt = Number(raw.at) || 0;
                             } else if (raw !== null && raw !== undefined) {
                                 savedMode = raw;
                             }
@@ -10377,19 +10426,21 @@ body {
                             try { currentAcct = betManualAccountKey(); } catch (e) {}
                             if (!savedAcct || !currentAcct || savedAcct === currentAcct) {
                                 bsFormulaMode = bsFormulaNormalize(savedMode);
+                                bsFormulaModeUpdatedAt = savedAt;
                             }
                         } catch (e) {}
                         bsFormulaAppliedMode = bsFormulaMode;
                         return bsFormulaMode;
                     }
                     function bsFormulaSave() {
+                        bsFormulaModeUpdatedAt = Date.now();
                         try {
                             let acct = '';
                             try { acct = betManualAccountKey(); } catch (e) {}
                             localStorage.setItem(LS_BS_FORMULA_MODE, JSON.stringify({
                                 mode: bsFormulaNormalize(bsFormulaMode),
                                 acct: acct,
-                                at: Date.now()
+                                at: bsFormulaModeUpdatedAt
                             }));
                         } catch (e) {}
                     }
@@ -10462,6 +10513,393 @@ body {
                         if (refresh !== false) bsFormulaScheduleRefresh();
                         return true;
                     }
+                    function bsFormulaAcctOk(acct) {
+                        const a = String(acct || '');
+                        if (!a) return true;
+                        let cur = '';
+                        try { cur = betManualAccountKey(); } catch (e) {}
+                        return !cur || a === cur;
+                    }
+                    function bsFormulaLedgerTime(entry) {
+                        return Math.max(Number(entry && entry.settledAt) || 0, Number(entry && entry.placedAt) || 0);
+                    }
+                    function bsFormulaLedgerNormalize(raw) {
+                        raw = raw || {};
+                        const oid = String(raw.oid || '').trim();
+                        const issue = String(raw.issue || '').trim();
+                        const bit = Number(raw.bit) === 1 ? 1 : 0;
+                        const count = Number(raw.count) || 0;
+                        const placedAt = Number(raw.placedAt) || 0;
+                        return {
+                            key: String(raw.key || (oid ? ('o:' + oid) : ('k:' + issue + '|' + bit + '|' + count + '|' + placedAt))),
+                            oid: oid,
+                            issue: issue,
+                            bit: bit,
+                            count: count,
+                            total: Number(raw.total) || 0,
+                            formula: Number(raw.formula) === 2 ? 2 : (Number(raw.formula) === 1 ? 1 : 0),
+                            win: raw.win === true ? true : (raw.win === false ? false : null),
+                            placedAt: placedAt,
+                            settledAt: Number(raw.settledAt) || 0,
+                            source: String(raw.source || ''),
+                            acct: String(raw.acct || '')
+                        };
+                    }
+                    function bsFormulaLedgerLoad() {
+                        if (bsFormulaLedgerLoaded) return bsFormulaLedger;
+                        bsFormulaLedgerLoaded = true;
+                        try {
+                            const arr = JSON.parse(localStorage.getItem(LS_BS_FORMULA_LEDGER) || '[]');
+                            bsFormulaLedger = (Array.isArray(arr) ? arr : []).map(bsFormulaLedgerNormalize)
+                                .filter(function (x) { return !!x.issue && x.count > 0; })
+                                .sort(function (a, b) { return bsFormulaLedgerTime(b) - bsFormulaLedgerTime(a); })
+                                .slice(0, 200);
+                        } catch (e) { bsFormulaLedger = []; }
+                        return bsFormulaLedger;
+                    }
+                    function bsFormulaLedgerSave() {
+                        try {
+                            bsFormulaLedger = bsFormulaLedger.slice().sort(function (a, b) {
+                                return bsFormulaLedgerTime(b) - bsFormulaLedgerTime(a);
+                            }).slice(0, 200);
+                            localStorage.setItem(LS_BS_FORMULA_LEDGER, JSON.stringify(bsFormulaLedger));
+                        } catch (e) {}
+                    }
+                    function bsFormulaLedgerUpsert(raw) {
+                        const entry = bsFormulaLedgerNormalize(raw);
+                        if (!entry.issue || !entry.count) return null;
+                        bsFormulaLedgerLoad();
+                        let idx = -1;
+                        for (let i = 0; i < bsFormulaLedger.length; i++) {
+                            const x = bsFormulaLedger[i];
+                            if (entry.oid && x.oid && entry.oid === x.oid) { idx = i; break; }
+                            if (entry.key && x.key && entry.key === x.key) { idx = i; break; }
+                        }
+                        if (idx < 0) {
+                            for (let i = 0; i < bsFormulaLedger.length; i++) {
+                                const x = bsFormulaLedger[i];
+                                if (entry.acct && x.acct && entry.acct !== x.acct) continue;
+                                if (x.issue === entry.issue && Number(x.bit) === Number(entry.bit) && Number(x.count) === Number(entry.count)) { idx = i; break; }
+                            }
+                        }
+                        let merged = entry;
+                        if (idx >= 0) {
+                            const old = bsFormulaLedger[idx];
+                            merged = Object.assign({}, old, entry, {
+                                key: entry.key || old.key,
+                                oid: entry.oid || old.oid,
+                                total: entry.total || old.total,
+                                formula: entry.formula || old.formula,
+                                win: entry.win !== null ? entry.win : old.win,
+                                placedAt: old.placedAt && entry.placedAt ? Math.min(old.placedAt, entry.placedAt) : (entry.placedAt || old.placedAt),
+                                settledAt: Math.max(Number(old.settledAt) || 0, Number(entry.settledAt) || 0),
+                                source: entry.source || old.source,
+                                acct: entry.acct || old.acct
+                            });
+                            bsFormulaLedger[idx] = merged;
+                        } else {
+                            bsFormulaLedger.push(entry);
+                        }
+                        bsFormulaLedgerSave();
+                        return merged;
+                    }
+                    function bsFormulaRowOid(row) {
+                        row = row || {};
+                        return String(row.orderNumber || row.orderId || row.betId || row.id || row.tradeNo || row.orderSn || row.orderNo || '').trim();
+                    }
+                    function bsFormulaRowTime(row) {
+                        row = row || {};
+                        const raw = row.addTime || row.createTime || row.time || row.betTime || row.settleTime || '';
+                        if (!raw) return 0;
+                        let t = Date.parse(String(raw));
+                        if (!Number.isFinite(t)) t = Date.parse(String(raw).replace(/-/g, '/'));
+                        return Number.isFinite(t) ? t : 0;
+                    }
+                    function bsFormulaLedgerForRow(row) {
+                        bsFormulaLedgerLoad();
+                        const oid = bsFormulaRowOid(row);
+                        let key = '';
+                        try { key = gtxBetRowKey(row); } catch (e) {}
+                        let issue = '';
+                        let bit = -1;
+                        try { issue = betAutoRowIssue(row); } catch (e) { issue = String((row && (row.issueNumber || row.issue)) || '').trim(); }
+                        try { bit = betAutoRowBit(row); } catch (e) {}
+                        const count = Number(row && row.betCount) || 0;
+                        const sorted = bsFormulaLedger.slice().sort(function (a, b) { return bsFormulaLedgerTime(b) - bsFormulaLedgerTime(a); });
+                        for (let i = 0; i < sorted.length; i++) {
+                            const x = sorted[i];
+                            if (!bsFormulaAcctOk(x.acct)) continue;
+                            if (oid && x.oid && oid === x.oid) return x;
+                            if (key && x.key && key === x.key) return x;
+                        }
+                        let fallback = null;
+                        for (let i = 0; i < sorted.length; i++) {
+                            const x = sorted[i];
+                            if (!bsFormulaAcctOk(x.acct)) continue;
+                            if (x.issue === issue && Number(x.bit) === Number(bit) && Number(x.count) === count) {
+                                if (x.formula === 1 || x.formula === 2) return x;
+                                if (!fallback) fallback = x;
+                            }
+                        }
+                        return fallback;
+                    }
+                    function bsFormulaResolveWatcherFormula(watcher) {
+                        const direct = Number(watcher && watcher.formula);
+                        if (direct === 1 || direct === 2) return direct;
+                        try {
+                            if (typeof betCycleMatchesWatcher === 'function' && betCycleMatchesWatcher(watcher)
+                                && typeof betCycle !== 'undefined' && betCycle) {
+                                return Number(betCycle.formula) === 2 ? 2 : 1;
+                            }
+                        } catch (e) {}
+                        try {
+                            if (bsShuffled) return bsFormulaDisplayedMode();
+                        } catch (e) {}
+                        return 0;
+                    }
+                    function bsFormulaLedgerRecordOutcome(watcher, row, win) {
+                        const formula = bsFormulaResolveWatcherFormula(watcher);
+                        if (formula !== 1 && formula !== 2) return null;
+                        let key = '';
+                        try { key = gtxBetRowKey(row); } catch (e) {}
+                        return bsFormulaLedgerUpsert({
+                            key: key,
+                            oid: String((watcher && watcher.oid) || bsFormulaRowOid(row) || ''),
+                            issue: String((watcher && watcher.issue) || ''),
+                            bit: Number(watcher && watcher.bit) === 1 ? 1 : 0,
+                            count: Number(watcher && watcher.count) || 0,
+                            total: Number(watcher && watcher.total) || 0,
+                            formula: formula,
+                            win: !!win,
+                            placedAt: Number(watcher && watcher.placedAt) || 0,
+                            settledAt: Date.now(),
+                            source: 'settled-watcher',
+                            acct: String((watcher && watcher.acct) || '')
+                        });
+                    }
+                    function bsFormulaAuditLoad() {
+                        if (bsFormulaAuditLoaded) return bsFormulaAuditState;
+                        bsFormulaAuditLoaded = true;
+                        try {
+                            const raw = JSON.parse(localStorage.getItem(LS_BS_FORMULA_AUDIT) || 'null');
+                            if (raw && typeof raw === 'object') {
+                                const acct = raw.acct ? String(raw.acct) : '';
+                                if (bsFormulaAcctOk(acct)) {
+                                    bsFormulaAuditState = {
+                                        lastKey: String(raw.lastKey || ''),
+                                        lastFormula: Number(raw.lastFormula) === 2 ? 2 : (Number(raw.lastFormula) === 1 ? 1 : 0),
+                                        lastTo: Number(raw.lastTo) === 2 ? 2 : (Number(raw.lastTo) === 1 ? 1 : 0),
+                                        lastPlacedIndex: Number.isFinite(Number(raw.lastPlacedIndex)) ? Number(raw.lastPlacedIndex) : -1,
+                                        checkedAt: Number(raw.checkedAt) || 0,
+                                        scanned: Number(raw.scanned) || 0,
+                                        source: String(raw.source || ''),
+                                        inference: String(raw.inference || ''),
+                                        acct: acct
+                                    };
+                                }
+                            }
+                        } catch (e) {}
+                        return bsFormulaAuditState;
+                    }
+                    function bsFormulaAuditSave() {
+                        try {
+                            let acct = '';
+                            try { acct = betManualAccountKey(); } catch (e) {}
+                            bsFormulaAuditState.acct = acct || bsFormulaAuditState.acct || '';
+                            localStorage.setItem(LS_BS_FORMULA_AUDIT, JSON.stringify(bsFormulaAuditState));
+                        } catch (e) {}
+                    }
+                    function bsFormulaAuditMark(info) {
+                        bsFormulaAuditLoad();
+                        bsFormulaAuditState = {
+                            lastKey: String((info && info.key) || ''),
+                            lastFormula: Number(info && info.formula) === 2 ? 2 : (Number(info && info.formula) === 1 ? 1 : 0),
+                            lastTo: Number(info && info.to) === 2 ? 2 : (Number(info && info.to) === 1 ? 1 : 0),
+                            lastPlacedIndex: Number.isFinite(Number(info && info.placedIndex)) ? Number(info.placedIndex) : -1,
+                            checkedAt: Date.now(),
+                            scanned: Number(info && info.scanned) || bsFormulaAuditState.scanned || 0,
+                            source: String((info && info.source) || ''),
+                            inference: String((info && info.inference) || ''),
+                            acct: bsFormulaAuditState.acct || ''
+                        };
+                        bsFormulaAuditSave();
+                        return bsFormulaAuditState;
+                    }
+                    function bsFormulaInferHistoricalFormula(row, txKey) {
+                        const audit = bsFormulaAuditLoad();
+                        if (txKey && audit.lastKey === txKey && (audit.lastFormula === 1 || audit.lastFormula === 2)) return audit.lastFormula;
+                        const current = bsFormulaCurrent();
+                        const updatedAt = Number(bsFormulaModeUpdatedAt) || 0;
+                        const rowTime = bsFormulaRowTime(row);
+                        if (rowTime && updatedAt) return updatedAt >= rowTime ? (current === 1 ? 2 : 1) : current;
+                        if (!updatedAt) return current;
+                        return 0;
+                    }
+                    function bsFormulaAuditBoundary() {
+                        try {
+                            if (typeof betPlacing !== 'undefined' && betPlacing) return 'placing';
+                            if (typeof betManualHasPendingWatcher === 'function' && betManualHasPendingWatcher()) return 'pending';
+                            if (typeof betCycle !== 'undefined' && betCycle && betCycle.active) return 'cycle-active';
+                            if (typeof betAuto !== 'undefined' && betAuto && (betAuto.active || betAuto.starting)) return 'auto-active';
+                            if (typeof betManualSuggestedLoad === 'function' && Number(betManualSuggestedLoad()) !== 0) return 'mid-cycle';
+                        } catch (e) {}
+                        return '';
+                    }
+                    function bsFormulaAuditRowWin(row, bit) {
+                        if (!row || Number(row.state) === 2) return null;
+                        try {
+                            const outcome = betManualOutcome(row, { bit: bit });
+                            return outcome ? !!outcome.win : null;
+                        } catch (e) {}
+                        const stateN = Number(row.state);
+                        if (stateN === 1 || row.state === true) return true;
+                        if (stateN === 0 || row.state === false) return false;
+                        let profit = NaN;
+                        try { profit = gtxParseMoney(row.profitAmount); } catch (e) {}
+                        if (Number.isFinite(profit) && profit !== 0) return profit > 0;
+                        return null;
+                    }
+                    function bsFormulaAuditRecent30(rows, opts) {
+                        opts = opts || {};
+                        const boundary = opts.ignoreBoundary ? '' : bsFormulaAuditBoundary();
+                        if (boundary) return { skipped: boundary, found: false, changed: false, scanned: 0 };
+                        let list = [];
+                        if (rows && rows.length) list = rows.slice();
+                        else {
+                            try { list = (gtxBetHistoryRows || []).slice(); } catch (e) { list = []; }
+                        }
+                        if (!list.length) return { found: false, changed: false, scanned: 0, reason: 'no-history' };
+                        try { list.sort(gtxBetRowCmp); } catch (e) {}
+                        list = list.slice(0, 30);
+                        let levels = [1, 2, 5, 10, 25, 72, 180];
+                        try {
+                            if (typeof BET_MULTIPLES_CUSTOM !== 'undefined' && BET_MULTIPLES_CUSTOM.length >= 7) levels = BET_MULTIPLES_CUSTOM;
+                        } catch (e) {}
+                        let signatureParts = [String(bsFormulaCurrent()), String(list.length)];
+                        for (let s = 0; s < list.length; s++) {
+                            let k = '';
+                            try { k = gtxBetRowKey(list[s]); } catch (e) {}
+                            signatureParts.push(k + ':' + String(list[s] && list[s].state) + ':' + String(list[s] && list[s].profitAmount) + ':' + String(list[s] && list[s].betCount));
+                        }
+                        const signature = signatureParts.join('|');
+                        const now = Date.now();
+                        if (!opts.forceScan && signature === bsFormulaAuditLastSignature && now - bsFormulaAuditLastRunAt < 5000) {
+                            return { skipped: 'duplicate', found: false, changed: false, scanned: list.length };
+                        }
+                        bsFormulaAuditLastSignature = signature;
+                        bsFormulaAuditLastRunAt = now;
+                        const audit = bsFormulaAuditLoad();
+                        for (let i = 0; i < list.length; i++) {
+                            const row = list[i] || {};
+                            let bit = -1;
+                            try { bit = betAutoRowBit(row); } catch (e) {}
+                            if (bit !== 0 && bit !== 1) continue;
+                            const placedIndex = levels.indexOf(Number(row.betCount));
+                            if (placedIndex < 4) continue;
+                            if (bsFormulaAuditRowWin(row, bit) !== true) continue;
+                            let txKey = '';
+                            try { txKey = gtxBetRowKey(row); } catch (e) {}
+                            const ledger = bsFormulaLedgerForRow(row);
+                            let placedFormula = ledger && (ledger.formula === 1 || ledger.formula === 2) ? ledger.formula : 0;
+                            let inference = placedFormula ? 'ledger' : '';
+                            if (!placedFormula) {
+                                placedFormula = bsFormulaInferHistoricalFormula(row, txKey);
+                                inference = placedFormula ? 'timeline-inferred' : 'unknown';
+                                if (placedFormula) {
+                                    let issue = '';
+                                    try { issue = betAutoRowIssue(row); } catch (e) {}
+                                    bsFormulaLedgerUpsert({
+                                        key: txKey,
+                                        oid: bsFormulaRowOid(row),
+                                        issue: issue,
+                                        bit: bit,
+                                        count: Number(row.betCount) || 0,
+                                        total: Number(row.amount) || ((Number(row.betCount) || 0) * 1000),
+                                        formula: placedFormula,
+                                        win: true,
+                                        placedAt: bsFormulaRowTime(row) || now,
+                                        settledAt: bsFormulaRowTime(row) || now,
+                                        source: 'audit-30',
+                                        acct: ledger && ledger.acct ? ledger.acct : ''
+                                    });
+                                }
+                            }
+                            if (placedFormula !== 1 && placedFormula !== 2) {
+                                return {
+                                    found: true, unknownFormula: true, changed: false,
+                                    key: txKey, placedIndex: placedIndex, scanned: list.length,
+                                    source: String(opts.source || '')
+                                };
+                            }
+                            const desired = placedFormula === 1 ? 2 : 1;
+                            const current = bsFormulaCurrent();
+                            let changed = false;
+                            let refreshed = false;
+                            if (current !== desired) {
+                                if (opts.refresh === 'immediate') {
+                                    changed = bsFormulaSet(desired, false);
+                                    try {
+                                        if (bsBaseDigits && bsBaseDigits.length === BS_SWAP_SRC.length) { bsShuffle(); refreshed = true; }
+                                    } catch (e) {}
+                                } else if (opts.refresh === 'defer') {
+                                    changed = bsFormulaSet(desired, false);
+                                } else {
+                                    changed = bsFormulaSet(desired, true);
+                                    refreshed = !!changed;
+                                }
+                            } else {
+                                let shown = current;
+                                try { shown = bsFormulaDisplayedMode(); } catch (e) {}
+                                if (shown !== desired && opts.refresh !== 'defer') {
+                                    if (opts.refresh === 'immediate') {
+                                        try {
+                                            if (bsBaseDigits && bsBaseDigits.length === BS_SWAP_SRC.length) { bsShuffle(); refreshed = true; }
+                                        } catch (e) {}
+                                    } else {
+                                        bsFormulaScheduleRefresh();
+                                        refreshed = true;
+                                    }
+                                }
+                            }
+                            const alreadyApplied = !!(audit && audit.lastKey && txKey && audit.lastKey === txKey && !changed);
+                            bsFormulaAuditMark({
+                                key: txKey,
+                                formula: placedFormula,
+                                to: desired,
+                                placedIndex: placedIndex,
+                                scanned: list.length,
+                                source: String(opts.source || 'audit-30'),
+                                inference: inference
+                            });
+                            if (changed && opts.announce !== false) {
+                                try {
+                                    betSetStatus('🔎 Đã rà soát ' + list.length + '/30 giao dịch gần nhất: thấy thắng ở R'
+                                        + (placedIndex + 1) + ' bằng Công thức ' + placedFormula
+                                        + ' · chu kỳ mới dùng Công thức ' + desired, 'ok');
+                                } catch (e) {}
+                            }
+                            return {
+                                found: true,
+                                changed: !!changed,
+                                refreshed: !!refreshed,
+                                alreadyApplied: alreadyApplied,
+                                from: placedFormula,
+                                to: desired,
+                                placedIndex: placedIndex,
+                                key: txKey,
+                                scanned: list.length,
+                                inference: inference,
+                                source: String(opts.source || '')
+                            };
+                        }
+                        try {
+                            bsFormulaAuditState.checkedAt = now;
+                            bsFormulaAuditState.scanned = list.length;
+                            bsFormulaAuditState.source = String(opts.source || 'audit-30');
+                            bsFormulaAuditSave();
+                        } catch (e) {}
+                        return { found: false, changed: false, scanned: list.length, source: String(opts.source || '') };
+                    }
                     function bsFormulaOnBetOutcome(win, watcher) {
                         if (!win || !watcher) return null;
                         let levels = [1, 2, 5, 10, 25, 72, 180];
@@ -10470,18 +10908,7 @@ body {
                         } catch (e) {}
                         const placedIndex = levels.indexOf(Number(watcher.count));
                         if (placedIndex < 4) return null;   // thắng ở R5/R6/R7 (25K/72K/180K) mới đổi công thức
-                        let placedFormula = Number(watcher.formula);
-                        if (placedFormula !== 1 && placedFormula !== 2) {
-                            placedFormula = 0;
-                            try {
-                                if (bsShuffled) placedFormula = bsFormulaDisplayedMode();
-                            } catch (e) {}
-                            try {
-                                if (!placedFormula && typeof betCycleMatchesWatcher === 'function' && betCycleMatchesWatcher(watcher)) {
-                                    placedFormula = bsFormulaDisplayedMode();
-                                }
-                            } catch (e) {}
-                        }
+                        const placedFormula = bsFormulaResolveWatcherFormula(watcher);
                         if (placedFormula !== 1 && placedFormula !== 2) return null;
                         const next = placedFormula === 1 ? 2 : 1;
                         const changed = bsFormulaCurrent() !== next && bsFormulaSet(next, true);
@@ -10823,6 +11250,14 @@ body {
                                         betSel = null;
                                         betSideBlinkStopped = false;
                                     }
+                                } catch (e) {}
+                                try {
+                                    bsFormulaAuditRecent30(gtxBetHistoryRows, {
+                                        source: 'lay-so',
+                                        refresh: 'defer',
+                                        forceScan: true,
+                                        announce: false
+                                    });
                                 } catch (e) {}
                                 try { refreshBigSmall(); } catch (e) {}
                                 findSegmentsFromInput();
@@ -12426,4 +12861,4 @@ body {
                         });
                 </script>
    
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4c54bc6ad04c5e8',t:'MTc5MjMwMjk0Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4d8a7ea18b8855d',t:'MTc5MjUwNTk0OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4e0d8f1def51fc7',t:'MTc5MjU5MTg0NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4c54bc6ad04c5e8',t:'MTc5MjMwMjk0Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4d8a7ea18b8855d',t:'MTc5MjUwNTk0OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4e0f9059f7604f4',t:'MTc5MjU5MzE1OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
