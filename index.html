@@ -536,6 +536,32 @@
                 box-shadow: 0 0 0 #92400e, 0 2px 6px rgba(251,191,36,.35);
             }
             #segExportTxtBtn.empty { filter: grayscale(.55); opacity:.65; }
+            /* Hàng 2 nút xuất kho: 📄 Xuất TXT + 📋 Copy kho */
+            #exportTxtRow {
+                display: flex; gap: 8px; align-items: stretch;
+                width: 100%; margin-top: 8px; box-sizing: border-box;
+            }
+            #exportTxtRow button {
+                flex: 1 1 0; min-width: 0; min-height: 42px;
+                border-radius: 10px; font-size: 13px; font-weight: 800;
+                padding: 8px 10px; white-space: nowrap;
+            }
+            #exportTxtRow #copyArchiveTxtBtn {
+                flex: 0 0 auto;
+                background: linear-gradient(180deg,#e2e8f0 0%,#cbd5e1 30%,#94a3b8 70%,#64748b 100%);
+                border: 1px solid #475569; color:#0f172a; font-weight:800;
+                text-shadow: 0 1px 0 rgba(255,255,255,.45);
+                box-shadow: 0 2px 0 #334155, 0 4px 10px rgba(0,0,0,.30),
+                            inset 0 1px 0 rgba(255,255,255,.65);
+            }
+            #exportTxtRow #copyArchiveTxtBtn:hover { filter: brightness(1.07); }
+            #exportTxtRow #copyArchiveTxtBtn:active {
+                transform: translateY(2px);
+                box-shadow: 0 0 0 #334155, 0 2px 6px rgba(0,0,0,.30);
+            }
+            @media (max-width: 430px) {
+                #exportTxtRow button { font-size: 12px; min-height: 40px; padding: 7px 8px; }
+            }
             /* ===== 📊 Khung so sánh LỚN / NHỎ trong N trang gần nhất ===== */
             #pgStatBox { background:#0b1220; border:1px solid #4c1d95; border-radius:8px;
                          padding:6px 8px; margin-top:7px; }
@@ -3582,6 +3608,12 @@ body {
                                 <div class="custom-bet-input-row"><small style="color:#cbd5e1;flex:1">Dừng nhập 1,5 giây để tự chuyển ô · Nhấn ÁP DỤNG để lưu</small><button id="btnApplyCustomBet" type="button">ÁP DỤNG</button></div>
                                 <div class="custom-bet-status" id="customBetStatus" role="status"></div>
                             </div>
+                            <div id="exportTxtRow">
+                                <button type="button" class="btn-mini" id="segExportTxtBtn" onclick="exportArchiveTxt()"
+                                        title="Xuất TOÀN BỘ kho ra file .txt dạng 0-1 — mỗi dòng 1 chữ số (0 = số 0-4 NHỎ, 1 = số 5-9 LỚN), số MỚI NHẤT ở dòng CUỐI">📄 Xuất TXT (0 kỳ)</button>
+                                <button type="button" class="btn-mini" id="copyArchiveTxtBtn" onclick="copyArchiveTxt()"
+                                        title="Copy TOÀN BỘ kho (dạng 0-1, mới nhất ở dòng cuối) ra clipboard — dán vào Notepad rồi Lưu thành .txt nếu trình duyệt chặn tải file">📋 Copy kho</button>
+                            </div>
                     <section id="lowerAppFrame" aria-label="Lấy số, tra đoạn và đặt cược">
                     <div id="lowerFrameMeta"><span class="ch-count" id="dataTableCount">0 kỳ</span></div>
                     <span class="gon-hide" style="display:none!important">📋 Tra đoạn 5 số trong kho</span>
@@ -3701,8 +3733,6 @@ body {
                             <button class="btn-mini" onclick="findSegmentsFromInput()" style="background:#4a1942;border-color:#d946ef;font-weight:bold">🔎 Tìm đoạn</button>
                             <button class="btn-mini" onclick="segTakeLast()" style="background:#065f46;border-color:#34d399;font-weight:bold">🧾 Lấy số</button>
                             <button class="btn-mini" onclick="clearSegInput()">✖ Xoá</button>
-                            <button type="button" class="btn-mini" id="segExportTxtBtn" onclick="exportArchiveTxt()"
-                                    title="Xuất TOÀN BỘ kho (hơn 10.000 kỳ) ra file .txt — mỗi dòng: kỳ | số | giờ">📄 Xuất TXT (0 kỳ)</button>
                         </div>
                         <div id="segInfo" style="font-size:10px;color:#94a3b8;margin-top:4px">Nhập đủ số ô ➜ tự COPY xuống các ô dưới (số ô copy luôn BẰNG số ô nhập) ➜ ô nhập tự trả về ô ĐẦU để nhập tiếp. Hoặc bấm "🧾 Lấy số" để lấy các số cuối cùng trong kho.</div>
                     </div>
@@ -12664,13 +12694,16 @@ body {
                         dataTableLastLen = gameArchive.length;
                     }
                     // 📄 XUẤT CẢ KHO (5000 trang) RA FILE TXT — mở bằng bản "Tra đoạn số — OFFLINE"
-                    // dựng nội dung file txt cả kho (mỗi dòng: kỳ | số | giờ)
+                    // dựng nội dung file txt cả kho DẠNG 0-1 — mỗi dòng 1 chữ số, số MỚI NHẤT ở dòng CUỐI
                     function buildArchiveTxt() {
-                        const stamp = new Date().toLocaleString('vi-VN');
-                        let swapLines = [];
-                        try { if (typeof bsSwapTxtLines === 'function') swapLines = bsSwapTxtLines(); } catch (e) {}
-                        const lines = swapLines.concat(['KHO GAME | ' + gameArchive.length + ' ky | ' + stamp, 'ky | so | gio']);
-                        for (const e of gameArchive) lines.push(e.i + ' | ' + e.d + ' | ' + (e.t ? fmtTime(e.t) : ''));
+                        // Chỉ xuất CHỮ SỐ 0-1, không kỳ/giờ — kho đang sắp MỚI → CŨ
+                        // nên đảo ngược để số MỚI NHẤT nằm ở DÒNG CUỐI CÙNG.
+                        const lines = [];
+                        for (let k = gameArchive.length - 1; k >= 0; k--) {
+                            const d = Number(gameArchive[k] && gameArchive[k].d);
+                            if (!Number.isFinite(d)) continue;
+                            lines.push(d >= 5 ? '1' : '0');
+                        }
                         return lines.join('\r\n');
                     }
                     // kho trong máy trống -> kéo từ Firebase về trước
@@ -12742,8 +12775,8 @@ body {
                             if (info) {
                                 info.style.color = '#4ade80';
                                 info.textContent = '📄 Đã xuất ' + gameArchive.length.toLocaleString('vi-VN')
-                                    + ' kỳ ra file "' + name + '" — mở bản "Tra đoạn số — OFFLINE" rồi bấm "📂 Tải file txt" là tra được không cần mạng.'
-                                    + ' (Nếu file không tự tải: bấm "📋 Copy kho ra clipboard")';
+                                    + ' dòng 0-1 (0 = số 0-4, 1 = số 5-9 · số MỚI NHẤT ở DÒNG CUỐI) ra file "' + name + '".'
+                                    + ' (Nếu file không tự tải: bấm "📋 Copy kho")';
                             }
                         } catch (err) {
                             showTxtFallback(text, name);
@@ -12768,7 +12801,7 @@ body {
                                     if (info) {
                                         info.style.color = '#4ade80';
                                         info.textContent = '📋 Đã copy ' + gameArchive.length.toLocaleString('vi-VN')
-                                            + ' kỳ ra clipboard — dán vào Notepad rồi Lưu thành "' + name + '".';
+                                            + ' dòng 0-1 (mới nhất ở dòng cuối) ra clipboard — dán vào Notepad rồi Lưu thành "' + name + '".';
                                     }
                                 })
                                 .catch(function () { showTxtFallback(text, name); });
@@ -12790,7 +12823,7 @@ body {
                         if (b.textContent !== txt) b.textContent = txt;
                         try { b.classList.toggle('empty', n === 0); } catch (e) {}
                         b.title = n
-                            ? ('Xuất ' + n.toLocaleString('vi-VN') + ' kỳ' + (cloud ? ' (trên Firebase — sẽ tải về rồi mới xuất)' : '') + ' ra file .txt')
+                            ? ('Xuất ' + n.toLocaleString('vi-VN') + ' kỳ' + (cloud ? ' (trên Firebase — sẽ tải về rồi mới xuất)' : '') + ' ra file .txt DẠNG 0-1 — mỗi dòng 1 chữ số, số MỚI NHẤT ở dòng CUỐI')
                             : 'Kho đang trống — bấm "⬇️ Tải 100 trang" (cần token API) rồi xuất lại.';
                     }
                     /* ===== 📊 SO SÁNH LỚN / NHỎ TRONG N TRANG GẦN NHẤT (1 trang = 10 kỳ) ===== */
@@ -13980,4 +14013,4 @@ body {
                     })();
                 </script>
    
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4c54bc6ad04c5e8',t:'MTc5MjMwMjk0Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4d8a7ea18b8855d',t:'MTc5MjUwNTk0OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4e34c398a980500',t:'MTc5MjYxNzUzNw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a52e64a36b44d8fd',t:'MTc5MzQwNDk2OQ=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a52e64a36b44d8fd',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a52fd1e95a9c08b3',t:'MTc5MzQxOTkzMQ=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a52fd1e95a9c08b3',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4c54bc6ad04c5e8',t:'MTc5MjMwMjk0Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4d8a7ea18b8855d',t:'MTc5MjUwNTk0OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4e34c398a980500',t:'MTc5MjYxNzUzNw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a52e64a36b44d8fd',t:'MTc5MzQwNDk2OQ=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a52e64a36b44d8fd',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a52fd1e95a9c08b3',t:'MTc5MzQxOTkzMQ=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a52fd1e95a9c08b3',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a543fa7b1c259fe0',t:'MTc5MzYzMTMwOA=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a543fa7b1c259fe0',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
