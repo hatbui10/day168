@@ -3922,11 +3922,15 @@ body {
                             box.title = tip;
                         }
                     }
-                    // ===== TÔ VÀNG NHÓM THEO QUY TẮC 5 Ô CUỐI =====
-                    // Lấy 5 ô cuối cùng làm chuẩn: k = độ dài dãy giống nhau ở đuôi (k = 2..5).
-                    // k >= 2 → tô vàng MỌI nhóm k ô LIÊN TIẾP giống loại, quét ngược từ ô mới nhất:
-                    //   nhóm đúng k → tô vàng · nhóm DÀI HƠN k → DỪNG (k=2: gặp nhóm 3 là ngừng)
-                    //   nhóm ngắn hơn k → bỏ qua, quét tiếp. "Giống nhau" = cùng LỚN (5-9) / NHỎ (0-4).
+                    // ===== TÔ VÀNG NHÓM "B" THEO MẪU A-B…B-A (CHỈ TÔ B) =====
+                    // Lấy 6 Ô CUỐI CÙNG làm chuẩn:
+                    //   • B = loại của ô CUỐI CÙNG (LỚN nếu 5-9, NHỎ nếu 0-4). A = loại NGƯỢC LẠI của B.
+                    //   • Đếm nhóm B liền nhau ở ĐUÔI bảng (tối đa 6 ô) → gọi là k.
+                    //   • k < 2  → KHÔNG TÔ GÌ CẢ trên toàn bảng (ô cuối khác loại với ô kế cuối).
+                    //   • k >= 2 → tô đúng k ô B ở đuôi.
+                    //   • Quét NGƯỢC về đầu bảng: mỗi đoạn  A | B…B (đúng k ô) | A  → chỉ tô k ô B ở GIỮA,
+                    //     KHÔNG tô 2 ô A ở hai đầu.
+                    //   • Chỉ tô MỘT loại B — không bao giờ tô lẫn lớn với nhỏ.
                     function applyPatHighlight() {
                         try {
                             const boxes = [];
@@ -3942,29 +3946,42 @@ body {
                                 if (!Number.isInteger(d) || d < 0 || d > 9) return -1;
                                 return d >= 5 ? 1 : 0;
                             };
-                            const idx = [];                     // ô CÓ SỐ, theo thứ tự cũ → mới (mới nhất ở cuối)
+                            const idx = [];                     // ô CÓ SỐ, thứ tự cũ → mới (mới nhất ở cuối)
                             for (let i = 0; i < cells.length; i++) if (ot(i) >= 0) idx.push(i);
-                            if (idx.length < 2) return;
-                            const win = idx.slice(-5);          // 5 Ô CUỐI LÀM CHUẨN
-                            const t0 = ot(win[win.length - 1]);
-                            let k = 1;
-                            for (let j = win.length - 2; j >= 0; j--) { if (ot(win[j]) === t0) k++; else break; }
-                            if (k < 2) return;                  // đuôi không có nhóm >= 2 → không tô
-                            const runs = [];                    // các nhóm liên tiếp, từ NHÓM ĐUÔI ngược về đầu
-                            let p = idx.length - 1;
-                            while (p >= 0) {
-                                const t = ot(idx[p]);
-                                let q = p;
-                                while (q >= 0 && ot(idx[q]) === t) q--;
-                                runs.push({ a: q + 1, b: p, len: p - q });
-                                p = q;
+                            const n = idx.length;
+                            if (n < 2) return;
+                            const t = idx.map(ot);
+
+                            const WIN = 6;                      // xét 6 ô cuối cùng làm chuẩn
+                            const B = t[n - 1];                 // B = loại của ô cuối cùng
+                            const A = B === 1 ? 0 : 1;          // A = loại ngược lại của B
+
+                            // đếm nhóm B liền nhau ở ĐUÔI (tối đa WIN ô)
+                            let k = 0;
+                            for (let j = n - 1; j >= 0 && j >= n - WIN; j--) {
+                                if (t[j] === B) k++; else break;
                             }
-                            const mark = (r) => { for (let j = r.a; j <= r.b; j++) { const b = boxes[idx[j]]; if (b) b.classList.add('pat-hl'); } };
-                            mark(runs[0]);                      // nhóm đuôi: tô toàn bộ (kể cả dài hơn k — chuẩn chỉ nhìn 5 ô)
-                            for (let r = 1; r < runs.length; r++) {
-                                if (runs[r].len > k) break;     // nhóm DÀI HƠN k → DỪNG (k=2: gặp nhóm 3)
-                                if (runs[r].len === k) mark(runs[r]);
-                                // ngắn hơn k → bỏ qua, quét tiếp
+                            if (k < 2) return;                  // đuôi không có >= 2 ô cùng loại B → KHÔNG tô
+
+                            const mark = (from, to) => {
+                                for (let j = from; j <= to; j++) {
+                                    const b = boxes[idx[j]];
+                                    if (b) b.classList.add('pat-hl');
+                                }
+                            };
+                            mark(n - k, n - 1);                 // tô đúng k ô B ở cuối bảng
+
+                            // quét ngược: các đoạn A - B…B (đúng k ô) - A  → tô k ô B ở giữa
+                            let p = n - k - 1;
+                            while (p >= 0) {
+                                if (t[p] !== B) { p--; continue; }
+                                let q = p;
+                                while (q >= 0 && t[q] === B) q--;
+                                const len = p - q;              // số ô B của nhóm (q+1 … p)
+                                const hasABefore = (q >= 0 && t[q] === A);
+                                const hasAAfter = ((p + 1) < n && t[p + 1] === A);
+                                if (len === k && hasABefore && hasAAfter) mark(q + 1, p);
+                                p = q;
                             }
                         } catch (e) {}
                     }
@@ -13884,7 +13901,7 @@ return placedIndex >= betPatternLen() - 1
                             if (TOTAL>0) renderCell(TOTAL-1);
                             try { renderLastRow(); } catch(e){}
                             try { refreshBigSmall(); } catch(e){}      // khung LON/NHO luon tuoi
-                            try { applyPatHighlight(); } catch(e){}     // cập nhật tô vàng nhóm theo 5 ô cuối
+                            try { applyPatHighlight(); } catch(e){}     // cập nhật tô vàng nhóm B theo mẫu A-B…B-A (6 ô cuối làm chuẩn)
                         } catch(e){}
                     }, 3000);
                     // KHÔNG reload cả trang: làm lịch sử kẹt STT cũ (vd 816) trong khi bảng đã tới 846
@@ -14070,4 +14087,4 @@ return placedIndex >= betPatternLen() - 1
                     })();
                 </script>
    
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4c54bc6ad04c5e8',t:'MTc5MjMwMjk0Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4d8a7ea18b8855d',t:'MTc5MjUwNTk0OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4e34c398a980500',t:'MTc5MjYxNzUzNw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a52e64a36b44d8fd',t:'MTc5MzQwNDk2OQ=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a52e64a36b44d8fd',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a52fd1e95a9c08b3',t:'MTc5MzQxOTkzMQ=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a52fd1e95a9c08b3',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4c54bc6ad04c5e8',t:'MTc5MjMwMjk0Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4d8a7ea18b8855d',t:'MTc5MjUwNTk0OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4e34c398a980500',t:'MTc5MjYxNzUzNw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a52e64a36b44d8fd',t:'MTc5MzQwNDk2OQ=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a52e64a36b44d8fd',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a52fd1e95a9c08b3',t:'MTc5MzQxOTkzMQ=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a52fd1e95a9c08b3',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a5549bd6ab741372',t:'MTc5MzgwNTY4OQ=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a5549bd6ab741372',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
