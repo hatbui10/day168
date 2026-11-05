@@ -697,7 +697,10 @@
                             <span id="segSortInfo" style="font-size:10px;color:#94a3b8">Kỳ lớn nhất trên cùng, bé dần xuống dưới (theo ID kỳ xổ)</span>
                         </div>
                         <div style="font-size:11px;color:#e9d5ff;font-weight:bold;margin-bottom:4px">🔎 Nhập các số đầu:</div>
-                        <div id="segInputs" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"></div>
+                        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+                            <div id="segInputs" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"></div>
+                        </div>
+                        <div style="font-size:10px;color:#94a3b8;margin-top:3px">🧾 Bấm <b style="color:#4ade80">Lấy số</b> = lấy các ô CUỐI của hàng 10 số trên bảng, đọc từ <b>trái → phải</b> (trái = cũ, phải = <b style="color:#fbbf24">mới nhất</b> trong kết quả game).</div>
                         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:7px">
                             <span style="font-size:11px;color:#94a3b8;font-weight:bold">⬇️ Copy xuống 4 ô:</span>
                             <span id="segMirror" style="display:flex;gap:6px"></span>
@@ -3373,16 +3376,52 @@
                         const mir = document.getElementById('segMirror');
                         if (mir && !mir.innerHTML) renderSegMirror([]);
                     }
-                    // Lấy N số cuối cùng trong kho điền vào các ô nhập -> hiện kết quả luôn
+                    /* ===== 🧾 HÀNG CUỐI BẢNG 10 Ô (trái → phải = CŨ → MỚI) =====
+                       Dùng cho nút "🧾 Lấy số": lấy các ô CUỐI của hàng 10, đọc từ TRÁI sang PHẢI,
+                       ưu tiên số MỚI NHẤT trong kết quả game (bảng sống → kho → Firebase). */
+                    function segLastRowDigits() {
+                        // (1) BẢNG SỐNG 50 ô: hàng cuối lấy theo đúng thứ tự cột 1→10 (trái→phải = cũ→mới)
+                        try {
+                            if (typeof boardCount !== 'undefined' && boardCount > 0 && typeof cells !== 'undefined' && cells.length) {
+                                const startIdx = Math.max(0, (boardRows - 1) * COLS);
+                                const gone = startIdx;                    // số ô đã bị đẩy khỏi bảng (phía trái)
+                                const out = [];
+                                for (let c = 0; c < COLS; c++) {
+                                    const cell = cells[startIdx + c];
+                                    const v = cell && cell.value !== null && cell.value !== undefined ? String(cell.value) : '';
+                                    if (/^[0-9]$/.test(v)) out.push({ d: v, i: (cell.sttFull || ''), gone: c < gone });
+                                }
+                                if (out.length) return { digits: out.map(o => o.d), src: 'board' };
+                            }
+                        } catch (e) {}
+                        // (2) KHO (gameArchive: mới nhất ở đầu) → 10 kỳ mới nhất, đảo thành trái→phải = cũ→mới
+                        try {
+                            const arr = gameArchive.filter(function (e) { return /^[0-9]$/.test(String(e.d)); });
+                            if (arr.length) {
+                                const take = arr.slice(0, COLS).reverse();   // cũ → mới
+                                return { digits: take.map(e => String(e.d)), src: 'archive' };
+                            }
+                        } catch (e) {}
+                        return { digits: [], src: 'none' };
+                    }
+                    // Lấy N số cuối cùng của HÀNG 10 Ô (đọc trái→phải) điền vào các ô nhập -> hiện kết quả luôn
                     function segTakeLast() {
                         const info = document.getElementById('segInfo');
                         const n = segPrefixLen();
-                        const arr = gameArchive.filter(function (e) { return /^[0-9]$/.test(String(e.d)); });
+                        const row = segLastRowDigits();
+                        const arr = row.digits;
                         if (arr.length >= n) {
+                            // lấy n Ô CUỐI (bên phải = số MỚI NHẤT) của hàng 10, giữ đúng thứ tự TRÁI → PHẢI (cũ → mới)
+                            const last = arr.slice(-n);
                             const ids = segInputIds();
                             for (let i = 0; i < n; i++) {
                                 const e = document.getElementById(ids[i]);
-                                if (e) e.value = String(arr[i].d);
+                                if (e) e.value = String(last[i]);
+                            }
+                            if (info) {
+                                info.style.color = '#94a3b8';
+                                info.textContent = '🧾 ' + n + ' ô cuối của hàng 10 (' + (row.src === 'board' ? 'bảng sống' : 'kho') + '): '
+                                    + last.join(' ') + ' — trái→phải = cũ→mới';
                             }
                             findSegmentsFromInput();
                             return true;
@@ -3396,7 +3435,7 @@
                                     const ids = segInputIds();
                                     for (let i = 0; i < n; i++) {
                                         const e = document.getElementById(ids[i]);
-                                        if (e) e.value = tail.charAt(i);
+                                        if (e) e.value = tail.charAt(n - 1 - i);   // tail = mới nhất ở đầu → đảo thành cũ→mới
                                     }
                                     findSegmentsFromInput();
                                 } else {
