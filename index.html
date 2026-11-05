@@ -544,6 +544,14 @@
     </head>
 
     <body>
+        <!-- 🚫 BANNER: gọi API từ tên miền khác sẽ bị CORS → báo rõ thay vì "treo"/quay mãi -->
+        <div id="corsWarnBar" style="display:none;max-width:560px;margin:0 0 10px;padding:10px 12px;background:#3b0a0a;border:2px solid #f87171;border-radius:8px;color:#fecaca;font-size:12px;line-height:1.55">
+            <b style="color:#fca5a5">🚫 Không tự tải được dữ liệu mới từ trang này</b><br>
+            <span id="corsWarnWhy">API vn168api.com không cho phép gọi từ tên miền lạ (CORS).</span><br>
+            → <b>Mở file index.html trực tiếp trên máy</b> (double-click) là app tự tải bình thường.<br>
+            → Hoặc đặt <code>PROXY_PREFIX</code> trong code = địa chỉ proxy CORS của bạn.<br>
+            💡 <b>Tra đoạn số vẫn chạy</b> bằng kho đã lưu trên Firebase / localStorage.
+        </div>
         <h2 id="mainTitle" class="hide-me">🔮 Dự đoán LỚN (≥5) / NHỎ (<5) - ô STT tiếp theo sau ô cuối (5,10)</h2>
                 <!-- ⏱ ĐỒNG HỒ GAME: đếm ngược tới kỳ mới, chu kỳ lấy từ chính dữ liệu game -->
                 <div id="gameClockBar" class="cell-history-panel hide-me" style="background:#0b1220;border-color:#fbbf24;width:420px;max-width:98%;padding:6px 10px">
@@ -623,34 +631,6 @@
                     <div style="text-align:right;margin-top:4px">
                         <button class="btn-mini" onclick="if(confirm('Xoá hết lịch sử dự đoán?')){predictLog=[];savePredictLog();lastPredictLogFp='';renderPredictLog();}" style="background:#7f1d1d;border-color:#f87171">🧹 Xoá</button>
                     </div>
-                </div>
-
-                <!-- 🤖 TỰ ĐỘNG ĐẶT CƯỢC - 28s + LỚN/NHỎ + GẤP THẾP -->
-                <!-- 🤖 TỰ ĐỘNG ĐẶT CƯỢC: nhập dãy gấp thếp -> thông báo -> bấm tự động đặt -->
-                <div id="autoBetPanel" class="cell-history-panel hide-me" style="background:#102a18;border-color:#4ade80;width:420px;max-width:98%">
-                    <div class="ch-head" style="color:#4ade80;display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px">
-                        <span>🤖 Tự động đặt LỚN / NHỎ</span>
-                        <span class="ch-count" id="autoBetCount">TẮT</span>
-                    </div>
-
-                    <!-- 🔁 NHẬP DÃY GẤP THẾP -->
-                    <div style="background:#1a0a1a;border:2px solid #d946ef;border-radius:8px;padding:8px 10px;margin-bottom:8px">
-                        <div style="font-size:11px;color:#f0abfc;font-weight:bold;margin-bottom:4px">🔁 DÃY GẤP THẾP (cách nhau bằng <b>-</b> <b>,</b> <b>;</b> hoặc xuống dòng · <b>k</b> = nghìn)</div>
-                        <textarea id="martingaleSequence" oninput="onMartingaleInput()" style="width:100%;height:46px;background:#0d0d0d;color:#f0abfc;border:1px solid #d946ef;border-radius:4px;padding:4px 6px;font-family:monospace;font-size:13px;box-sizing:border-box" placeholder="VD: 1k-2k-5k-12k-30k">1000,2000,5000,12000,30000</textarea>
-                        <div id="martingaleSeqPreview" style="font-size:10px;color:#fbbf24;margin-top:3px"></div>
-                        <div id="martingaleStatus" style="margin-top:5px;background:#0d0d0d;border:1px solid #4a194a;border-radius:4px;padding:5px 6px;font-size:11px;line-height:1.4;color:#e9d5ff">Chưa chạy gấp thếp</div>
-                    </div>
-
-                    <!-- 🔔 THÔNG BÁO TRÊN MÀN HÌNH -->
-                    <div id="betNotify" style="margin-bottom:8px;padding:8px 10px;background:#0b1220;border:1px solid #4da3ff;border-radius:8px;font-size:12px;color:#cfe8ff;line-height:1.5">Nhập dãy gấp thếp để bắt đầu.</div>
-
-                    <!-- ▶️ NÚT TỰ ĐỘNG ĐẶT -->
-                    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-                        <label style="display:flex;align-items:center;gap:5px;background:#052e16;padding:8px 14px;border-radius:8px;border:2px solid #4ade80;cursor:pointer"><input type="checkbox" id="autoBetEnable"> <b style="color:#4ade80;font-size:13px">▶️ TỰ ĐỘNG ĐẶT CƯỢC</b></label>
-                        <span id="autoBetIssue" style="font-size:11px;color:#ffd54a;font-weight:bold">-</span>
-                        <span style="font-size:10px;color:#64748b">đặt theo đồng hồ game · <span id="autoBetCountdown" style="color:#fbbf24;font-weight:bold">--</span>s</span>
-                    </div>
-                    <div id="autoBetLog" style="margin-top:6px;background:#0d0d0d;border:1px solid #1a4a2a;border-radius:4px;padding:4px 6px;max-height:96px;overflow-y:auto;font-family:monospace;font-size:10px;white-space:pre-wrap;word-break:break-all">Chưa đặt.</div>
                 </div>
 
                 <!-- FIREBASE - GIỮ LẠI -->
@@ -753,19 +733,6 @@
                     <div id="gpTable"></div>
                     <input id="gpN" value="100"><button id="btnGameAuto"></button><button id="btnGameStop"></button><button id="btnApiTest"></button>
                     <input id="filterDate" value="2026-09-13"><input id="filterStt" value="916">
-                    <!-- control đặt cược: giữ nguyên ID để logic chạy, không hiện trên giao diện -->
-                    <input id="autoBetAmount" type="number" min="1" value="1000"><span id="autoBetAmountDisplay">1.000</span>
-                    <input id="autoBetInterval" type="number" min="5" max="300" value="28">
-                    <input type="checkbox" id="martingaleEnable"><input type="checkbox" id="martingaleKx1000" checked>
-                    <input id="martingaleBase" value="1000"><input id="martingaleMult" value="2"><input id="martingaleMax" value="5">
-                    <input id="autoBetMinConf" type="number" min="0" max="100" value="0">
-                    <input id="autoBetMapL" value="L"><input id="autoBetMapN" value="N">
-                    <input type="checkbox" id="autoBetDry">
-                    <input id="autoBetLastIssueShort" value="-">
-                    <div id="autoBetLastBox" style="display:none"><div id="autoBetLastDetail"></div></div>
-                    <textarea id="autoBetTemplate">{"typeId":30,"issueNumber":"{ISSUE}","betType":"{BET_TYPE}","amount":{AMOUNT},"language":2,"random":"{RANDOM}","signature":"{SIGNATURE}","timestamp":{TIMESTAMP}}</textarea>
-                    <input id="tgBotToken"><input id="tgChatId"><input type="checkbox" id="tgEnable" checked>
-                    <button id="btnPlaceBetNow" onclick="placeBetNow()"></button><button id="btnResetMart" onclick="resetMartingale()"></button>
                 </div>
 
                 <script>
@@ -1294,7 +1261,6 @@
                         arOrigin: "https://373vn.com",
                         apiResult: "https://vn168api.com/api/webapi/GetNoaverageEmerdList",
                         apiIssue: "https://vn168api.com/api/webapi/GetGameIssue",
-                        apiBet: "https://vn168api.com/api/webapi/GameBetting",
                         payload: { typeId: 30, language: 2, random: "4d3fb5ed4f834fdb9bdfa7e947510b21", signature: "F7752055ADB99E86DBC8B0DAC9AA224D", timestamp: 1772716919 }
                     };
                     
@@ -1653,6 +1619,24 @@
                        (3) tiện ích chặn quảng cáo, (4) CORS khi mở file bằng file://.
                        => apiPost giờ PHÂN LOẠI lỗi + kèm HƯỚNG XỬ LÝ, và apiPostRetry tự thử lại có giãn cách. */
                     let deadToken = '';   // token đã bị server báo 401 → NGỪNG bắn request (kể cả auto-refresh 15s) tới khi người dùng dán token KHÁC
+                    /* ⚡ PROXY CORS (tuỳ chọn): đặt thành 'https://proxy-cua-ban/?url=' nếu API bị chặn CORS ở tên miền đang chạy.
+                       Để trống = gọi trực tiếp vn168api.com như cũ. */
+                    const PROXY_PREFIX = '';
+                    function apiUrl(u) { return PROXY_PREFIX ? (PROXY_PREFIX + encodeURIComponent(u)) : u; }
+                    function showCorsBar() {
+                        try {
+                            const bar = document.getElementById('corsWarnBar');
+                            const why = document.getElementById('corsWarnWhy');
+                            if (why) why.textContent = 'Request đầu tiên tới vn168api.com đã bị chặn (Failed to fetch) — trình duyệt/tường lửa không cho gọi API từ ' + location.hostname + location.pathname + '.';
+                            if (bar) bar.style.display = 'block';
+                        } catch (e) {}
+                    }
+                    /* 🚫 "Failed to fetch" NGAY TỪ REQUEST ĐẦU (chưa có lần nào OK) = KHÔNG PHẢI do tải nhanh,
+                       mà do trình duyệt/tường lửa CHẶN API (CORS ở tên miền khác, Cloudflare chặn IP, tiện ích chặn…).
+                       → app DỪNG NGAY + báo rõ, KHÔNG thử lại 5000 trang trong vô vọng nữa. */
+                    let netHardBlock = false;   // đã xác định: môi trường này không gọi được API
+                    let netBlockRetried = false; // đã tự thử lại 1 lần sau khi bị chặn chưa (tránh quay vòng mãi)
+                    let apiOkCount = 0;         // số request API thành công trong phiên
                     function tokenAlive() {
                         const t = getToken() || '';
                         if (!deadToken) return true;
@@ -1668,6 +1652,7 @@
                             http: 'HTTP ' + (status || '?') + ': 401 = token hết hạn (dán token mới) · 403/429/503 = bị chặn hoặc giới hạn tần suất (chờ vài phút, giảm tốc).',
                             html: 'API trả về TRANG HTML (challenge Cloudflare) → mở trang game thật 1 lần rồi lấy lại token.',
                             json: 'Phản hồi không phải JSON hợp lệ.',
+                            cors: 'API vn168api.com KHÔNG trả header CORS nên chỉ gọi được từ file mở trên máy (file://). Cách chạy: (1) mở file index.html trực tiếp trên máy/điện thoại, hoặc (2) đặt PROXY_PREFIX trong code = địa chỉ proxy CORS của bạn.',
                             auth: 'Token hết hạn/sai → bấm 📋 Lấy token rồi Lưu token.'
                         })[kind] || '';
                         return e;
@@ -1677,8 +1662,11 @@
                     async function apiPost(url, body) {
                         const tok = extractToken(getToken() || '');
                         let res;
+                        if (netHardBlock) {   // đã biết chắc là không gọi được → khỏi bắn thêm request
+                            throw apiError('cors', 'Request đầu tiên đã bị chặn (Failed to fetch) — môi trường này không gọi được vn168api.com.', 0);
+                        }
                         try {
-                            res = await fetch(url, {
+                            res = await fetch(apiUrl(url), {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json;charset=UTF-8',
@@ -1689,6 +1677,7 @@
                                 body: JSON.stringify(body)
                             });
                         } catch (err) {
+                            if (apiOkCount === 0) netHardBlock = true;   // chưa có lần nào OK → bị chặn thật, không phải do nhanh
                             throw apiError('net', 'Failed to fetch (' + (err && err.message ? err.message : String(err)) + ')', 0);
                         }
                         const canText = (typeof res.text === 'function');
@@ -1703,7 +1692,7 @@
                             catch (e) { throw apiError('json', 'Không đọc được phản hồi JSON: ' + e.message, res.status); }
                         }
                         if (!text) throw apiError('json', 'API trả về rỗng (HTTP ' + res.status + ')', res.status);
-                        try { return JSON.parse(text); }
+                        try { const js = JSON.parse(text); apiOkCount++; return js; }
                         catch (e) {
                             const isHtml = /^\s*<(!doctype|html|head|body|script)/i.test(text);
                             throw apiError(isHtml ? 'html' : 'json',
@@ -2167,7 +2156,6 @@
                                 
                                 lastInsertedIssue = issue;
                                 pushValueRaw(dg, stt, rowTimeMs(row), issue);
-                                try { checkMartingaleResult(issue, dg); } catch(e){}
                                 filled++;
                             }
                             
@@ -3105,7 +3093,25 @@
                                     gpStatus('⚠️ Trang ' + page + ' THẤT BẠI sau ' + ATTEMPTS + ' lần: ' + pageErr.message
                                         + ' — đã ghi nhận để TẢI BÙ cuối đợt, đi tiếp trang sau (nhịp giãn còn ' + paceMs + 'ms).');
                                     // ⛔ DỪNG SỚM: gọi tiếp chỉ làm bị chặn LÂU hơn. Mở lại app (hoặc dán token mới) sẽ TỰ tải tiếp đúng chỗ này.
-                                    if (pageErr.kind === 'auth') {
+                                    if (pageErr.kind === 'cors' || netHardBlock) {
+                                        hardAbort = true;
+                                        showCorsBar();
+                                        endReason = '🚫 MÁY/TRÌNH DUYỆT NÀY BỊ CHẶN GỌI API (Failed to fetch ngay từ request đầu) — KHÔNG phải do tải nhanh, nên app DỪNG chứ không đốt 5000 trang.\n'
+                                            + '· Nếu đang chạy trên web (github.io…): API không cho CORS → mở file index.html trực tiếp trên máy, hoặc đặt PROXY_PREFIX.\n'
+                                            + '· Nếu mở file trên máy: tắt tiện ích chặn quảng cáo / đổi mạng, mở trang game 1 lần rồi dán token mới.\n'
+                                            + '💡 Tra đoạn số vẫn chạy bằng kho đã lưu (Firebase/localStorage).';
+                                        if (!netBlockRetried) {          // chỉ tự thử lại ĐÚNG 1 LẦN sau 90s (lỡ mạng chập chờn)
+                                            netBlockRetried = true;
+                                            endReason += '\n⏳ App sẽ tự thử lại 1 lần sau 90 giây.';
+                                            if (autoRetryTimer) clearTimeout(autoRetryTimer);
+                                            autoRetryTimer = setTimeout(() => {
+                                                autoRetryTimer = null; netHardBlock = false; autoStartArmed = true;
+                                                autoStartBulkLoad('tự thử lại sau khi bị chặn');
+                                            }, 90000);
+                                        } else {
+                                            autoStartArmed = false;   // đã thử lại 1 lần vẫn lỗi → thôi, không quay vòng nữa
+                                        }
+                                    } else if (pageErr.kind === 'auth') {
                                         hardAbort = true;
                                         autoStartArmed = true;   // dán token MỚI vào là app TỰ tải tiếp ngay, không phải bấm nút
                                         endReason = '⛔ TOKEN HẾT HẠN / không hợp lệ — dán token mới vào ô Token API, app sẽ TỰ tải tiếp từ trang ' + page + '.';
@@ -3252,6 +3258,14 @@
                     function autoLoadEnabled() { try { return localStorage.getItem('vn168_autoLoad') !== '0'; } catch (e) { return true; } }
                     function autoStartBulkLoad(why) {
                         if (!autoStartArmed || !bootReady || !autoLoadEnabled()) return;
+                        if (netHardBlock) {   // 🚫 đã xác định môi trường này không gọi được API → không tự tải, chỉ báo 1 lần
+                            if (!noTokenNotice) { noTokenNotice = true; showCorsBar();
+                                gpStatus('🚫 MÁY/TRÌNH DUYỆT NÀY BỊ CHẶN GỌI API (Failed to fetch ngay từ request đầu).\n'
+                                    + '→ Nếu mở trên web (github.io…): API không cho CORS → mở file index.html TRỰC TIẾP trên máy, hoặc đặt PROXY_PREFIX.\n'
+                                    + '→ Nếu mở file trên máy: tắt tiện ích chặn quảng cáo / đổi mạng, mở trang game 1 lần rồi dán token mới.\n'
+                                    + '💡 Phần “📋 Tra đoạn số” VẪN CHẠY bình thường bằng kho đã lưu trên Firebase/localStorage — không cần API.'); }
+                            return;
+                        }
                         if (!getToken()) {
                             if (!noTokenNotice) { noTokenNotice = true;
                                 gpStatus('⚙️ SẴN SÀNG tự tải ' + AUTO_LOAD_PAGES + ' trang — chỉ chờ TOKEN. Dán token vào ô "Token API" (hoặc bấm 📋 Lấy token) là app TỰ chạy + TỰ đẩy lên Firebase, KHÔNG cần bấm nút tải.'); }
@@ -5323,678 +5337,6 @@
                         predictNext(true);
                     }
                     
-                    // ================= 🤖 AUTO BET
-                    // ================= 🤖 AUTO BET 28s + LỚN/NHỎ + GẤP THẾP DÃY TỰ NHẬP =================
-                    const LS_AUTOBET = 'vn168_autobet_cfg_v1';
-                    const LS_MART = 'vn168_martingale_v1';
-                    let autoBetLastIssue = '';
-                    let autoBetLastPred = '';
-                    let currentGameIssue = '';
-                    let autoBetTimer = null;
-                    /* ---------- ⏱ ĐỒNG HỒ GAME ----------
-                       Chu kỳ 1 kỳ + thời điểm kỳ gần nhất rơi được TÍNH TỪ CHÍNH DỮ LIỆU GAME
-                       (kho 5000 trang + các ô mới nhất trên bảng) nên đồng hồ này chạy song song
-                       với đồng hồ đếm ngược của game. */
-                    let gameClock = { cycleSec: 28, lastDrawMs: 0, nextDrawMs: 0, ok: false };
-                    function syncGameClock(force) {
-                        try {
-                            const list = (typeof histData === 'function') ? histData().list : [];
-                            if (!list || !list.length) return;
-                            // list sắp MỚI -> CŨ; chỉ lấy các kỳ có giờ rơi thật
-                            const ts = [];
-                            for (let i = 0; i < list.length && ts.length < 80; i++) {
-                                const t = Number(list[i].t) || 0;
-                                if (t > 1e11 && t < Date.now() + 6e5) ts.push(t);
-                            }
-                            if (!ts.length) return;
-                            ts.sort((a, b) => a - b);
-                            const gaps = [];
-                            for (let i = 1; i < ts.length; i++) {
-                                const g = (ts[i] - ts[i - 1]) / 1000;
-                                if (g >= 5 && g <= 900) gaps.push(g);
-                            }
-                            if (gaps.length) {
-                                gaps.sort((a, b) => a - b);
-                                const med = gaps[Math.floor(gaps.length / 2)];
-                                const cyc = Math.max(10, Math.min(300, Math.round(med)));
-                                if (cyc !== gameClock.cycleSec || force) {
-                                    gameClock.cycleSec = cyc;
-                                    const iv = document.getElementById('autoBetInterval');
-                                    if (iv) iv.value = String(cyc);   // đồng bộ chu kỳ đặt cược = chu kỳ game
-                                }
-                            }
-                            gameClock.lastDrawMs = ts[ts.length - 1];
-                            gameClock.nextDrawMs = gameClock.lastDrawMs + gameClock.cycleSec * 1000;
-                            gameClock.ok = true;
-                        } catch (e) {}
-                    }
-                    function gameClockRemainSec() {
-                        if (!gameClock.ok || !gameClock.nextDrawMs) return null;
-                        const now = Date.now();
-                        let r = Math.ceil((gameClock.nextDrawMs - now) / 1000);
-                        let guard = 0;
-                        while (r <= 0 && guard++ < 600) {           // lỡ nhịp -> nhảy sang kỳ kế tiếp
-                            gameClock.nextDrawMs += gameClock.cycleSec * 1000;
-                            r = Math.ceil((gameClock.nextDrawMs - now) / 1000);
-                        }
-                        return Math.max(0, r);
-                    }
-                    function gameClockText() {
-                        const r = gameClockRemainSec();
-                        if (r === null) return '--:--';
-                        const m = Math.floor(r / 60), s = r % 60;
-                        return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
-                    }
-                    function updateGameClockUI() {
-                        const el = document.getElementById('gameClockTime');
-                        if (el) {
-                            el.textContent = gameClockText();
-                            const r = gameClockRemainSec();
-                            el.style.color = (r !== null && r <= 5) ? '#f87171' : '#fbbf24';
-                        }
-                        const iss = document.getElementById('gameClockIssue');
-                        const cur = (typeof lastInsertedIssue !== 'undefined' && lastInsertedIssue) ? String(lastInsertedIssue)
-                            : ((typeof currentGameIssue !== 'undefined' && currentGameIssue) ? String(currentGameIssue) : '');
-                        if (iss && cur) iss.textContent = cur;
-                        const cyc = document.getElementById('gameClockCycle');
-                        if (cyc) cyc.textContent = String(gameClock.cycleSec);
-                        const st = document.getElementById('gameClockState');
-                        if (st) {
-                            if (!gameClock.ok) st.textContent = 'chưa có dữ liệu game → chạy mặc định ' + gameClock.cycleSec + 's';
-                            else st.textContent = 'đã đồng bộ với đồng hồ game · kỳ trước: '
-                                + new Date(gameClock.lastDrawMs).toLocaleTimeString('vi-VN');
-                        }
-                    }
-                    setInterval(function () { try { updateGameClockUI(); } catch (e) {} }, 250);
-                    setInterval(function () { try { syncGameClock(); } catch (e) {} }, 5000);
-                    let autoBetCountdown = 28;
-                    let autoBetLastBetTime = 0; // ms
-                    // Martingale state - dãy tự nhập 1-2-5-12...
-                    let martingaleState = {
-                        enabled: false,
-                        sequence: [1000,2000,5000,12000,30000], // dãy tiền
-                        currentStep: 0,
-                        pendingIssue: '',
-                        pendingPred: '',
-                        pendingAmount: 0,
-                        pendingStep: 0,
-                        totalProfit: 0,
-                        wins: 0,
-                        losses: 0,
-                        // legacy fields để tương thích cũ
-                        base: 1000,
-                        mult: 2,
-                        maxSteps: 5
-                    };
-                    function formatMoney(n) {
-                        const num = Number(n)||0;
-                        return num.toLocaleString('vi-VN');
-                    }
-                    // Parse dãy gấp thếp: hỗ trợ 1k-2k-5k, 1000,2000,5000, 1-2-5-12 với x1000
-                    function parseMartingaleSequence(str) {
-                        if (!str) return [];
-                        let s = String(str).trim();
-                        // thay xuống dòng bằng dấu phẩy
-                        s = s.replace(/[\n\r]+/g, ',');
-                        const parts = s.split(/[,;\s\-|]+/).filter(x=>x.trim()!=='');
-                        const kx1000 = document.getElementById('martingaleKx1000')?.checked;
-                        const out = [];
-                        for (let p of parts) {
-                            p = p.trim().toLowerCase();
-                            let mult = 1;
-                            if (p.endsWith('k')) { mult = 1000; p = p.slice(0,-1); }
-                            // cho phép 1.5k
-                            let num = parseFloat(p);
-                            if (!isFinite(num) || num<=0) continue;
-                            num = num * mult;
-                            // nếu bật x1000 và số <1000 thì x1000 (để 1-2-5-12 thành 1k-2k-5k)
-                            if (kx1000 && num < 1000 && mult===1) {
-                                // nếu dãy có số lớn >=1000 thì số nhỏ là nghìn, nếu không thì vẫn x1000 theo checkbox
-                                // đơn giản: nếu bất kỳ số nào <100 thì x1000 hết số <1000
-                                num = num * 1000;
-                            }
-                            out.push(Math.round(num));
-                        }
-                        // loại 0, giới hạn 50 bước
-                        return out.filter(n=>n>0).slice(0,50);
-                    }
-                    function getMartingaleSequence() {
-                        const el = document.getElementById('martingaleSequence');
-                        const txt = el ? el.value : '';
-                        const seq = parseMartingaleSequence(txt);
-                        if (seq.length) {
-                            martingaleState.sequence = seq;
-                            // cập nhật legacy
-                            martingaleState.base = seq[0];
-                            martingaleState.maxSteps = seq.length;
-                        }
-                        return martingaleState.sequence.length ? martingaleState.sequence : [1000,2000,5000,12000];
-                    }
-                    function updateMartingaleSeqPreview() {
-                        const preview = document.getElementById('martingaleSeqPreview');
-                        if (!preview) return;
-                        const seq = parseMartingaleSequence(document.getElementById('martingaleSequence')?.value||'');
-                        if (!seq.length) { preview.textContent = 'Dãy trống!'; preview.style.color='#f87171'; return; }
-                        preview.style.color='#fbbf24';
-                        const total = seq.reduce((a,b)=>a+b,0);
-                        preview.textContent = seq.length+' bước: '+seq.map(formatMoney).join(' → ') + ' | Tổng nếu thua hết: '+formatMoney(total);
-                    }
-                    function updateAutoBetAmountDisplay() {
-                        const el = document.getElementById('autoBetAmount');
-                        const disp = document.getElementById('autoBetAmountDisplay');
-                        if (!el || !disp) return;
-                        const v = el.value || '0';
-                        disp.textContent = formatMoney(v);
-                        const num = Number(v)||0;
-                        if (num>=100000) disp.style.color = '#f87171';
-                        else if (num>=10000) disp.style.color = '#fbbf24';
-                        else disp.style.color = '#4ade80';
-                        if (martingaleState.enabled) {
-                            const realAmt = getMartingaleAmount();
-                            const seq = getMartingaleSequence();
-                            disp.textContent = formatMoney(realAmt) + ' (bước '+(martingaleState.currentStep+1)+'/'+seq.length+')';
-                        }
-                    }
-                    function autoBetLog(msg) {
-                        const el = document.getElementById('autoBetLog');
-                        const t = new Date().toLocaleTimeString('vi-VN');
-                        const line = '['+t+'] '+msg;
-                        if (el) { el.textContent = line + '\n' + el.textContent.slice(0,5000); }
-                        console.log('[AUTO-BET] '+line);
-                    }
-                    // --- Martingale dãy tự nhập ---
-                    function loadMartingale() {
-                        try {
-                            const raw = localStorage.getItem(LS_MART);
-                            if (raw) {
-                                const o = JSON.parse(raw);
-                                // nếu có sequence cũ
-                                if (o.sequence && Array.isArray(o.sequence)) martingaleState.sequence = o.sequence;
-                                else if (o.base && o.mult) {
-                                    // convert legacy base*mult^ -> sequence
-                                    const base = Number(o.base)||1000;
-                                    const mult = Number(o.mult)||2;
-                                    const max = Number(o.maxSteps)||5;
-                                    const seq = [];
-                                    for (let i=0;i<max;i++) seq.push(Math.round(base*Math.pow(mult,i)));
-                                    martingaleState.sequence = seq;
-                                }
-                                if (typeof o.currentStep==='number') martingaleState.currentStep = o.currentStep;
-                                if (typeof o.enabled==='boolean') martingaleState.enabled = o.enabled;
-                                if (typeof o.totalProfit==='number') martingaleState.totalProfit = o.totalProfit;
-                                if (typeof o.wins==='number') martingaleState.wins = o.wins;
-                                if (typeof o.losses==='number') martingaleState.losses = o.losses;
-                                if (o.pendingIssue) martingaleState.pendingIssue = o.pendingIssue;
-                                if (o.pendingPred) martingaleState.pendingPred = o.pendingPred;
-                                if (o.pendingAmount) martingaleState.pendingAmount = o.pendingAmount;
-                            }
-                        } catch(e){}
-                        const en = document.getElementById('martingaleEnable');
-                        const seqEl = document.getElementById('martingaleSequence');
-                        if (en) en.checked = !!martingaleState.enabled;
-                        if (seqEl) {
-                            // nếu chưa có text thì đổ sequence hiện tại vào
-                            if (!seqEl.value || seqEl.value.trim()==='') {
-                                seqEl.value = martingaleState.sequence.join(',');
-                            } else {
-                                // nếu có sequence lưu, ưu tiên lưu
-                                const savedSeq = martingaleState.sequence;
-                                if (savedSeq && savedSeq.length) seqEl.value = savedSeq.join(',');
-                            }
-                        }
-                        updateMartingaleSeqPreview();
-                        updateMartingaleStatus();
-                    }
-                    function saveMartingale() {
-                        try {
-                            // luôn lấy sequence mới nhất từ input
-                            getMartingaleSequence();
-                            localStorage.setItem(LS_MART, JSON.stringify(martingaleState));
-                        } catch(e){}
-                    }
-                    function getMartingaleAmount() {
-                        if (!martingaleState.enabled) {
-                            return Number(document.getElementById('autoBetAmount')?.value||1000);
-                        }
-                        const seq = getMartingaleSequence();
-                        const step = Math.max(0, Math.min(martingaleState.currentStep, seq.length-1));
-                        return seq[step] || seq[seq.length-1] || 1000;
-                    }
-                    function updateMartingaleStatus() {
-                        const el = document.getElementById('martingaleStatus');
-                        if (!el) return;
-                        const seq = getMartingaleSequence();
-                        const step = martingaleState.currentStep||0;
-                        const amt = getMartingaleAmount();
-                        const isLast = step >= seq.length-1;
-                        const nextAmt = isLast ? seq[0] : (seq[Math.min(step+1, seq.length-1)] || amt);
-                        const pending = martingaleState.pendingIssue ? ('Đang chờ KQ kỳ '+martingaleState.pendingIssue+' ('+bsLabel(martingaleState.pendingPred)+') '+formatMoney(martingaleState.pendingAmount)+' bước '+(martingaleState.pendingStep+1)) : 'Không có lệnh chờ';
-                        const seqStr = seq.map((v,i)=> i===step ? '<b style="color:#4ade80">['+formatMoney(v)+']</b>' : formatMoney(v)).join(' → ');
-                        el.innerHTML = (martingaleState.enabled ? '<b style="color:#d946ef">🔁 BẬT GẤP THẾP DÃY (vòng lặp)</b>' : '<b style="color:#666">⏸️ TẮT GẤP THẾP</b>')
-                            + ' | Bước: <b style="color:#fbbf24">'+(step+1)+'/'+seq.length+'</b>'
-                            + ' | Tiền lần tới: <b style="color:#4ade80;font-size:13px">'+formatMoney(amt)+'</b>'
-                            + '<br><span style="font-size:10px;color:#c4b5fd">Dãy: '+seqStr+'</span>'
-                            + '<br>Thắng: <span style="color:#4ade80">'+martingaleState.wins+'</span> Thua: <span style="color:#f87171">'+martingaleState.losses+'</span> Lãi: <span style="color:'+(martingaleState.totalProfit>=0?'#4ade80':'#f87171')+'">'+formatMoney(martingaleState.totalProfit)+'</span>'
-                            + '<br><span style="font-size:10px;color:#999">'+pending+'</span>'
-                            + (isLast ? '<br>Nếu thua tiếp (hết dãy) → <b style="color:#fbbf24">quay lại đầu '+formatMoney(seq[0])+' (bước 1)</b>' : '<br>Nếu thua tiếp → '+formatMoney(nextAmt)+' (bước '+(step+2)+')');
-                    }
-                    /* ---------- 🔔 NHẬP DÃY GẤP THẾP XONG -> HIỆN THÔNG BÁO ---------- */
-                    function showBetNotify(msg, color) {
-                        const el = document.getElementById('betNotify');
-                        if (!el) return;
-                        el.innerHTML = msg;
-                        el.style.borderColor = color || '#4da3ff';
-                        if (typeof autoBetLog === 'function') autoBetLog('🔔 ' + msg.replace(/<[^>]+>/g, ''));
-                    }
-                    function onMartingaleInput() {
-                        try {
-                            const en = document.getElementById('martingaleEnable');
-                            if (en) en.checked = true;                      // nhập dãy = bật gấp thếp
-                            updateMartingaleSeqPreview();
-                            const raw = parseMartingaleSequence(document.getElementById('martingaleSequence')?.value || '');
-                            if (!raw.length) {
-                                showBetNotify('⚠️ DÃY GẤP THẾP KHÔNG HỢP LỆ — hãy nhập lại, VD: <b>1k-2k-5k-12k-30k</b> hoặc <b>1000,2000,5000</b>.', '#f87171');
-                                return;
-                            }
-                            const seq = getMartingaleSequence();
-                            const total = seq.reduce((a, b) => a + (Number(b) || 0), 0);
-                            saveAutoBetConfig();
-                            updateAutoBetAmountDisplay();
-                            updateMartingaleStatus();
-                            showBetNotify('✅ ĐÃ NHẬN DÃY GẤP THẾP: <b style="color:#f0abfc">'
-                                + seq.map(formatMoney).join(' → ') + '</b><br>'
-                                + 'Tổng <b>' + seq.length + '</b> bước · nếu thua hết dãy tốn <b style="color:#fbbf24">'
-                                + formatMoney(total) + '</b> · thua thì nhảy bước tiếp, thắng thì về đầu dãy.<br>'
-                                + 'Bấm <b style="color:#4ade80">▶️ TỰ ĐỘNG ĐẶT CƯỢC</b> để chạy theo đồng hồ game.', '#d946ef');
-                        } catch (e) {}
-                    }
-                    function resetMartingale() {
-                        martingaleState.currentStep = 0;
-                        martingaleState.pendingIssue = '';
-                        martingaleState.pendingPred = '';
-                        martingaleState.pendingAmount = 0;
-                        martingaleState.totalProfit = 0;
-                        martingaleState.wins = 0;
-                        martingaleState.losses = 0;
-                        saveMartingale();
-                        updateMartingaleStatus();
-                        updateAutoBetAmountDisplay();
-                        autoBetLog('🔄 Đã reset gấp thếp về bước 1/'+getMartingaleSequence().length+' tiền '+formatMoney(getMartingaleAmount()));
-                    }
-                    function checkMartingaleResult(issue, digit) {
-                        if (!martingaleState.pendingIssue) return;
-                        if (String(issue) !== String(martingaleState.pendingIssue)) return;
-                        const actualBS = digitToBS(digit);
-                        const predBS = martingaleState.pendingPred;
-                        const amt = Number(martingaleState.pendingAmount)||0;
-                        const isWin = actualBS === predBS;
-                        const seq = getMartingaleSequence();
-                        if (isWin) {
-                            martingaleState.wins++;
-                            martingaleState.totalProfit += amt;
-                            autoBetLog('✅ GẤP THẾP THẮNG kỳ '+issue+' | '+bsLabel(predBS)+' ra '+digit+' ('+bsLabel(actualBS)+') | +'+formatMoney(amt)+' | Reset về đầu dãy '+formatMoney(seq[0]));
-                            sendTelegram('✅ <b>GẤP THẾP THẮNG</b>\nKỳ: <code>'+issue+'</code>\nDự đoán: '+bsLabel(predBS)+' → KQ: '+digit+' ('+bsLabel(actualBS)+')\nTiền: '+formatMoney(amt)+'\nLãi tổng: '+formatMoney(martingaleState.totalProfit)+'\n→ Reset về đầu dãy '+formatMoney(seq[0]));
-                            martingaleState.currentStep = 0;
-                        } else {
-                            martingaleState.losses++;
-                            martingaleState.totalProfit -= amt;
-                            martingaleState.currentStep++;
-                            autoBetLog('❌ GẤP THẾP THUA kỳ '+issue+' | '+bsLabel(predBS)+' nhưng ra '+digit+' ('+bsLabel(actualBS)+') | -'+formatMoney(amt)+' | Lên bước '+(martingaleState.currentStep+1)+'/'+seq.length);
-                            sendTelegram('❌ <b>GẤP THẾP THUA</b>\nKỳ: <code>'+issue+'</code>\nDự đoán: '+bsLabel(predBS)+' → KQ: '+digit+' ('+bsLabel(actualBS)+')\nMất: '+formatMoney(amt)+'\nLỗ tổng: '+formatMoney(martingaleState.totalProfit)+'\n→ Bước tiếp: '+(martingaleState.currentStep+1)+' tiền '+formatMoney(getMartingaleAmount()));
-                            if (martingaleState.currentStep >= seq.length) {
-                                // HẾT DÃY MÀ VẪN THUA → CƯỢC LẠI TỪ ĐẦU theo yêu cầu user
-                                autoBetLog('🔁 Đã thua hết dãy '+seq.length+' bước (tiền cuối '+formatMoney(seq[seq.length-1])+') → QUAY LẠI ĐẦU DÃY cược '+formatMoney(seq[0])+' từ đầu');
-                                sendTelegram('🔁 <b>THUA HẾT DÃY</b> '+seq.length+' bước, tiền cuối '+formatMoney(seq[seq.length-1])+' vẫn thua\n→ <b>TỰ CƯỢC LẠI TỪ ĐẦU</b> '+formatMoney(seq[0]));
-                                martingaleState.currentStep = 0;
-                            }
-                        }
-                        martingaleState.pendingIssue = '';
-                        martingaleState.pendingPred = '';
-                        martingaleState.pendingAmount = 0;
-                        saveMartingale();
-                        updateMartingaleStatus();
-                        updateAutoBetAmountDisplay();
-                    }
-                    function saveAutoBetConfig() {
-                        try {
-                            const cfg = {
-                                amount: document.getElementById('autoBetAmount')?.value || '1000',
-                                minConf: document.getElementById('autoBetMinConf')?.value || '50',
-                                mapL: document.getElementById('autoBetMapL')?.value || 'L',
-                                mapN: document.getElementById('autoBetMapN')?.value || 'N',
-                                dry: document.getElementById('autoBetDry')?.checked ? '1':'0',
-                                enable: document.getElementById('autoBetEnable')?.checked ? '1':'0',
-                                interval: document.getElementById('autoBetInterval')?.value || '28',
-                                template: document.getElementById('autoBetTemplate')?.value || '',
-                                botToken: document.getElementById('tgBotToken')?.value || '',
-                                chatId: document.getElementById('tgChatId')?.value || '',
-                                tgEnable: document.getElementById('tgEnable')?.checked ? '1':'0',
-                                martEnable: document.getElementById('martingaleEnable')?.checked ? '1':'0',
-                                martSeq: document.getElementById('martingaleSequence')?.value || '1000,2000,5000,12000,30000',
-                                martKx: document.getElementById('martingaleKx1000')?.checked ? '1':'0',
-                            };
-                            localStorage.setItem(LS_AUTOBET, JSON.stringify(cfg));
-                            martingaleState.enabled = cfg.martEnable==='1';
-                            const seq = parseMartingaleSequence(cfg.martSeq);
-                            if (seq.length) martingaleState.sequence = seq;
-                            saveMartingale();
-                            updateMartingaleSeqPreview();
-                            autoBetLog('💾 Đã lưu | tiền='+formatMoney(cfg.amount)+' | '+cfg.interval+'s | gấp thếp '+(martingaleState.enabled?'BẬT dãy '+martingaleState.sequence.join('-'):'TẮT'));
-                            updateAutoBetAmountDisplay();
-                            updateMartingaleStatus();
-                            restartAutoBetTimer();
-                        } catch(e){ autoBetLog('❌ Lỗi lưu: '+e.message); }
-                    }
-                    function loadAutoBetConfig() {
-                        try {
-                            const raw = localStorage.getItem(LS_AUTOBET);
-                            if (!raw) { autoBetLog('⚠️ Chưa có cấu hình lưu'); updateAutoBetAmountDisplay(); updateMartingaleSeqPreview(); return; }
-                            const cfg = JSON.parse(raw);
-                            if (cfg.amount) document.getElementById('autoBetAmount').value = cfg.amount;
-                            if (cfg.minConf) document.getElementById('autoBetMinConf').value = cfg.minConf;
-                            if (cfg.mapL) document.getElementById('autoBetMapL').value = cfg.mapL;
-                            if (cfg.mapN) document.getElementById('autoBetMapN').value = cfg.mapN;
-                            if (cfg.interval) document.getElementById('autoBetInterval').value = cfg.interval;
-                            if (cfg.template) document.getElementById('autoBetTemplate').value = cfg.template;
-                            if (cfg.botToken) document.getElementById('tgBotToken').value = cfg.botToken;
-                            if (cfg.chatId) document.getElementById('tgChatId').value = cfg.chatId;
-                            if (cfg.dry!==undefined) document.getElementById('autoBetDry').checked = cfg.dry==='1';
-                            if (cfg.enable!==undefined) document.getElementById('autoBetEnable').checked = cfg.enable==='1';
-                            if (cfg.tgEnable!==undefined) document.getElementById('tgEnable').checked = cfg.tgEnable==='1';
-                            if (cfg.martEnable!==undefined) document.getElementById('martingaleEnable').checked = cfg.martEnable==='1';
-                            if (cfg.martSeq) document.getElementById('martingaleSequence').value = cfg.martSeq;
-                            if (cfg.martKx!==undefined) document.getElementById('martingaleKx1000').checked = cfg.martKx==='1';
-                            // legacy
-                            if (cfg.martBase && !cfg.martSeq) {
-                                const base = Number(cfg.martBase)||1000;
-                                const mult = Number(cfg.martMult)||2;
-                                const max = Number(cfg.martMax)||5;
-                                const seq = [];
-                                for (let i=0;i<max;i++) seq.push(Math.round(base*Math.pow(mult,i)));
-                                document.getElementById('martingaleSequence').value = seq.join(',');
-                            }
-                            autoBetLog('📥 Đã tải cấu hình | tiền='+formatMoney(cfg.amount)+' | '+cfg.interval+'s');
-                            updateAutoBetStatus();
-                            updateAutoBetAmountDisplay();
-                            updateMartingaleSeqPreview();
-                            loadMartingale();
-                        } catch(e){ autoBetLog('❌ Lỗi tải: '+e.message); }
-                    }
-                    function updateAutoBetStatus() {
-                        const en = document.getElementById('autoBetEnable')?.checked;
-                        const el = document.getElementById('autoBetCount');
-                        if (el) el.textContent = en ? ('BẬT · ' + (typeof gameClock!=='undefined' ? gameClock.cycleSec : 28) + 's') : 'TẮT';
-                        if (el) el.style.color = en ? '#4ade80' : '#999';
-                        updateAutoBetAmountDisplay();
-                        restartAutoBetTimer();
-                    }
-                    function updateAutoBetLastBox(issue, predBS, amount, status) {
-                        const box = document.getElementById('autoBetLastBox');
-                        const detail = document.getElementById('autoBetLastDetail');
-                        const shortEl = document.getElementById('autoBetLastIssueShort');
-                        if (shortEl) shortEl.textContent = issue ? String(issue).slice(-6) : '-';
-                        if (!box || !detail) return;
-                        box.style.display = 'block';
-                        const label = predBS ? bsLabel(predBS) : '?';
-                        const t = new Date().toLocaleString('vi-VN');
-                        detail.innerHTML = '<b>Kỳ:</b> <span style="color:#ffd54a">'+issue+'</span> | <b style="color:'+(predBS==='L'?'#4ade80':'#fbbf24')+';font-size:14px">'+label+'</b><br>'
-                            + '<b>💰 Tiền:</b> <span style="color:#4ade80;font-weight:bold;font-size:16px">'+formatMoney(amount)+'</span> <span style="color:#999">('+amount+')</span> | <b>'+status+'</b><br>'
-                            + '<span style="font-size:10px;color:#888">'+t+' | Mỗi '+(typeof gameClock!=='undefined'?gameClock.cycleSec:28)+'s theo đồng hồ game</span>';
-                    }
-                    // Lấy kỳ hiện tại
-                    async function getCurrentIssue() {
-                        if (!getToken()) { autoBetLog('⚠️ Chưa có token'); return null; }
-                        autoBetLog('🔄 Đang lấy kỳ hiện tại (GetGameIssue)...');
-                        try {
-                            const base = { typeId: CFG.payload.typeId, language: 2, random: randHex32() };
-                            const sorted = {}; Object.keys(base).sort().forEach(k=>sorted[k]=base[k]);
-                            const payload = { typeId: base.typeId, language: base.language, random: base.random, signature: md5hex(JSON.stringify(sorted)).toUpperCase(), timestamp: Math.floor(Date.now()/1000) };
-                            const res = await apiPost(CFG.apiIssue, payload);
-                            let issue = null;
-                            (function walk(o){
-                                if (!o || typeof o!=='object' || issue) return;
-                                if (Array.isArray(o)) { for(const it of o) walk(it); return; }
-                                const cand = o.issueNumber || o.issue || o.currentIssue || o.nextIssue || o.Issue || '';
-                                if (cand && String(cand).length>=8) { issue = String(cand); return; }
-                                for(const k in o) if (o[k] && typeof o[k]==='object') walk(o[k]);
-                            })(res);
-                            if (!issue) {
-                                issue = lastInsertedIssue || '';
-                                autoBetLog('⚠️ Không tìm thấy issue trong GetGameIssue, dùng lastInsertedIssue: '+issue);
-                            } else {
-                                autoBetLog('✅ Kỳ hiện tại: '+issue);
-                            }
-                            currentGameIssue = issue;
-                            const el = document.getElementById('autoBetIssue');
-                            if (el) el.textContent = issue || '-';
-                            return issue;
-                        } catch(e){
-                            autoBetLog('❌ Lỗi lấy kỳ: '+e.message);
-                            return null;
-                        }
-                    }
-                    function buildBetPayload(issue, predBS, amount) {
-                        const mapL = document.getElementById('autoBetMapL')?.value || 'L';
-                        const mapN = document.getElementById('autoBetMapN')?.value || 'N';
-                        const betType = predBS==='L' ? mapL : mapN;
-                        const tmplEl = document.getElementById('autoBetTemplate');
-                        let tmpl = tmplEl && tmplEl.value ? tmplEl.value.trim() : '';
-                        if (!tmpl) tmpl = '{"typeId":30,"issueNumber":"{ISSUE}","betType":"{BET_TYPE}","amount":{AMOUNT},"language":2,"random":"{RANDOM}","signature":"{SIGNATURE}","timestamp":{TIMESTAMP}}';
-                        const random = randHex32();
-                        const ts = Math.floor(Date.now()/1000);
-                        let toSign = { typeId: 30, issueNumber: issue, betType: betType, amount: Number(amount), language: 2, random: random };
-                        try {
-                            const parsed = JSON.parse(tmpl.replace(/{ISSUE}/g, issue).replace(/{BET_TYPE}/g, betType).replace(/{AMOUNT}/g, String(amount)).replace(/{TYPE_ID}/g, '30').replace(/{RANDOM}/g, random).replace(/{TIMESTAMP}/g, String(ts)).replace(/{SIGNATURE}/g, ''));
-                            if (parsed.betData) toSign = { typeId: 30, language: 2, random: random };
-                        } catch(e){}
-                        const sorted = {}; Object.keys(toSign).sort().forEach(k=>sorted[k]=toSign[k]);
-                        const signature = md5hex(JSON.stringify(sorted)).toUpperCase();
-                        let payloadStr = tmpl.replace(/{ISSUE}/g, issue).replace(/{BET_TYPE}/g, betType).replace(/{AMOUNT}/g, String(amount)).replace(/{TYPE_ID}/g, '30').replace(/{RANDOM}/g, random).replace(/{SIGNATURE}/g, signature).replace(/{TIMESTAMP}/g, String(ts));
-                        try { return JSON.parse(payloadStr); } catch(e){ return payloadStr; }
-                    }
-                    async function sendTelegram(msg) {
-                        try {
-                            const botToken = document.getElementById('tgBotToken')?.value || '6235887765:AAGcOHjay_qbixFwxOvJ4z_jxF6YAPIwAbI';
-                            const chatId = document.getElementById('tgChatId')?.value || '5452089308';
-                            const en = document.getElementById('tgEnable')?.checked;
-                            if (!en) return;
-                            if (!botToken || !chatId) return;
-                            const url = 'https://api.telegram.org/bot'+botToken+'/sendMessage';
-                            await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({chat_id: chatId, text: msg, parse_mode:'HTML'}) });
-                        } catch(e){}
-                    }
-                    function testTelegram() {
-                        const pred = window.lastPredictBS || 'L';
-                        const label = bsLabel(pred);
-                        sendTelegram('🧪 Test từ VN168\nDự đoán: <b>'+label+'</b>\nKỳ: '+(currentGameIssue||lastInsertedIssue||'-')+'\nTiền: '+formatMoney(getMartingaleAmount())+'\nGấp thếp: '+(martingaleState.enabled ? 'BẬT bước '+martingaleState.currentStep : 'TẮT'));
-                        autoBetLog('📨 Đã gửi test Telegram');
-                    }
-                    async function placeBetNow() {
-                        const pred = window.lastPredictBS;
-                        if (!pred) { autoBetLog('⚠️ Chưa có dự đoán LỚN/NHỎ'); return; }
-                        const amount = getMartingaleAmount();
-                        let issue = currentGameIssue || await getCurrentIssue();
-                        if (!issue) { autoBetLog('⚠️ Không có kỳ'); return; }
-                        await doPlaceBet(issue, pred, amount, true);
-                    }
-                    async function doPlaceBet(issue, predBS, amount, manual) {
-                        if (!getToken()) { autoBetLog('⚠️ Chưa có token'); return; }
-                        const dry = document.getElementById('autoBetDry')?.checked;
-                        const mapL = document.getElementById('autoBetMapL')?.value || 'L';
-                        const mapN = document.getElementById('autoBetMapN')?.value || 'N';
-                        const betType = predBS==='L' ? mapL : mapN;
-                        const label = bsLabel(predBS); // LỚN / NHỎ
-                        // tránh trùng kỳ nếu không phải test tay
-                        if (!dry && !manual) {
-                            if (autoBetLastIssue===issue) { autoBetLog('⏭️ Kỳ '+issue+' đã đặt rồi, chờ kỳ mới (28s sau)'); return; }
-                        }
-                        // nếu gấp thếp bật thì amount = tiền gấp thếp
-                        if (!manual && martingaleState.enabled) {
-                            amount = getMartingaleAmount();
-                        }
-                        const payload = buildBetPayload(issue, predBS, amount);
-                        const modeTxt = dry ? '[DRY]' : '[THẬT]';
-                        const srcTxt = manual ? 'TAY' : '28s AUTO';
-                        const martTxt = martingaleState.enabled ? ('[Gấp thếp bước '+martingaleState.currentStep+']') : '';
-                        autoBetLog(modeTxt+' '+srcTxt+' '+martTxt+' '+label+' ('+betType+') kỳ '+issue+' 💰='+formatMoney(amount)+' ('+amount+')');
-                        updateAutoBetLastBox(issue, predBS, amount, dry ? '🧪 DRY - chưa gửi thật' : '⏳ Đang gửi...');
-                        if (dry) {
-                            await sendTelegram('🧪 [DRY] <b>'+label+'</b> '+martTxt+'\nKỳ: <code>'+issue+'</code>\n💰 Tiền: <b>'+formatMoney(amount)+' ('+amount+')</b>\n⏱️ Mỗi 28s');
-                            updateAutoBetLastBox(issue, predBS, amount, '🧪 DRY OK');
-                            // vẫn lưu pending để test gấp thếp
-                            if (martingaleState.enabled) {
-                                martingaleState.pendingIssue = issue;
-                                martingaleState.pendingPred = predBS;
-                                martingaleState.pendingAmount = amount;
-                                martingaleState.pendingStep = martingaleState.currentStep;
-                                saveMartingale();
-                                updateMartingaleStatus();
-                            }
-                            autoBetLastIssue = issue;
-                            autoBetLastPred = predBS;
-                            autoBetLastBetTime = Date.now();
-                            try { localStorage.setItem('vn168_lastBetIssue', issue); localStorage.setItem('vn168_lastBetTime', String(Date.now())); } catch(e){}
-                            autoBetCountdown = Number(document.getElementById('autoBetInterval')?.value||28);
-                            return;
-                        }
-                        try {
-                            const res = await apiPost(CFG.apiBet, payload);
-                            autoBetLog('✅ THÀNH CÔNG '+label+' kỳ '+issue+' 💰='+formatMoney(amount)+' → '+JSON.stringify(res).slice(0,400));
-                            await sendTelegram('✅ Đã đặt <b>'+label+'</b> '+martTxt+'\nKỳ: <code>'+issue+'</code>\n💰 <b>'+formatMoney(amount)+' ('+amount+')</b>\n'+JSON.stringify(res).slice(0,200));
-                            autoBetLastIssue = issue;
-                            autoBetLastPred = predBS;
-                            autoBetLastBetTime = Date.now();
-                            try { localStorage.setItem('vn168_lastBetIssue', issue); localStorage.setItem('vn168_lastBetPred', predBS); localStorage.setItem('vn168_lastBetAmount', String(amount)); localStorage.setItem('vn168_lastBetTime', String(Date.now())); } catch(e){}
-                            updateAutoBetLastBox(issue, predBS, amount, '✅ THÀNH CÔNG');
-                            if (martingaleState.enabled) {
-                                martingaleState.pendingIssue = issue;
-                                martingaleState.pendingPred = predBS;
-                                martingaleState.pendingAmount = amount;
-                                martingaleState.pendingStep = martingaleState.currentStep;
-                                saveMartingale();
-                                updateMartingaleStatus();
-                            }
-                            autoBetCountdown = Number(document.getElementById('autoBetInterval')?.value||28);
-                        } catch(e){
-                            autoBetLog('❌ Lỗi đặt '+label+' kỳ '+issue+' 💰='+formatMoney(amount)+': '+e.message);
-                            await sendTelegram('❌ Lỗi <b>'+label+'</b> kỳ '+issue+' 💰='+formatMoney(amount)+': '+e.message);
-                            updateAutoBetLastBox(issue, predBS, amount, '❌ LỖI: '+e.message);
-                        }
-                    }
-                    // Timer 28s
-                    function restartAutoBetTimer() {
-                        if (autoBetTimer) { clearInterval(autoBetTimer); autoBetTimer = null; }
-                        const en = document.getElementById('autoBetEnable')?.checked;
-                        const intervalSec = Number(document.getElementById('autoBetInterval')?.value||28);
-                        if (!en) {
-                            const cd = document.getElementById('autoBetCountdown');
-                            if (cd) cd.textContent = 'TẮT';
-                            return;
-                        }
-                        autoBetCountdown = intervalSec;
-                        // đếm ngược mỗi giây — lấy từ ĐỒNG HỒ GAME nếu đã đồng bộ được
-                        autoBetTimer = setInterval(async ()=>{
-                            try {
-                                const enNow = document.getElementById('autoBetEnable')?.checked;
-                                if (!enNow) { clearInterval(autoBetTimer); return; }
-                                const gRemain = gameClockRemainSec();
-                                autoBetCountdown = (gRemain !== null) ? gRemain : Math.max(0, autoBetCountdown - 1);
-                                const cd = document.getElementById('autoBetCountdown');
-                                if (cd) cd.textContent = String(autoBetCountdown);
-                                // kiểm tra thời gian thực từ localStorage để chịu được reload 10s
-                                const lastTime = Number(localStorage.getItem('vn168_lastBetTime')||autoBetLastBetTime||0);
-                                const now = Date.now();
-                                const intervalMs = Number(document.getElementById('autoBetInterval')?.value||28)*1000;
-                                const elapsed = now - lastTime;
-                                if (elapsed < intervalMs && lastTime>0) {
-                                    const remain = Math.ceil((intervalMs - elapsed)/1000);
-                                    if (cd) cd.textContent = remain + ' (chờ)';
-                                    return;
-                                }
-                                if (autoBetCountdown <=0) {
-                                    autoBetCountdown = (gameClock.ok ? gameClock.cycleSec : intervalSec);
-                                    // đến lúc đặt
-                                    const pred = window.lastPredictBS;
-                                    if (!pred) { autoBetLog('⏳ Đồng hồ game hết chu kỳ nhưng chưa có dự đoán LỚN/NHỎ'); return; }
-                                    const minConf = Number(document.getElementById('autoBetMinConf')?.value||0);
-                                    let conf = 0;
-                                    try { conf = window.lastPredictConf || 0; } catch(e){}
-                                    if (conf && conf < minConf) { autoBetLog('⏭️ Bỏ qua 28s: BT '+conf+'% < min '+minConf+'%'); return; }
-                                    let issue = currentGameIssue || lastInsertedIssue || await getCurrentIssue();
-                                    if (!issue) return;
-                                    if (autoBetLastIssue && issue===autoBetLastIssue) {
-                                        // thử lấy kỳ mới
-                                        issue = await getCurrentIssue();
-                                        if (issue===autoBetLastIssue) { autoBetLog('⏭️ 28s nhưng kỳ vẫn '+issue+' chưa mới, chờ'); return; }
-                                    }
-                                    const amt = getMartingaleAmount();
-                                    autoBetLog('⏱️ Hết '+((typeof gameClock!=='undefined'&&gameClock.ok)?gameClock.cycleSec:28)+'s (đồng hồ game) → tự đặt '+bsLabel(pred)+' 💰='+formatMoney(amt));
-                                    await doPlaceBet(issue, pred, amt, false);
-                                }
-                            } catch(e){ autoBetLog('❌ Timer lỗi: '+e.message); }
-                        }, 1000);
-                    }
-                    // Hook dự đoán để lưu conf
-                    let autoBetHookInstalled = false;
-                    function installAutoBetHook() {
-                        if (autoBetHookInstalled) return;
-                        autoBetHookInstalled = true;
-                        const origPredict = predictNext;
-                        window.predictNext = function(force) {
-                            const result = origPredict.apply(this, arguments);
-                            try {
-                                if (result && result.topMethodBS) {
-                                    window.lastPredictConf = Math.round(result.topMethodBS.effAcc||result.topMethodBS.btBS?.acc||0);
-                                }
-                            } catch(e){}
-                            return result;
-                        };
-                    }
-                    setTimeout(()=>{
-                        try { loadAutoBetConfig(); } catch(e){}
-                        try {
-                            document.getElementById('autoBetEnable')?.addEventListener('change', ()=>{ updateAutoBetStatus(); saveAutoBetConfig(); });
-                            document.getElementById('autoBetAmount')?.addEventListener('input', ()=>{ updateAutoBetAmountDisplay(); });
-                            document.getElementById('autoBetAmount')?.addEventListener('change', ()=>{ updateAutoBetAmountDisplay(); saveAutoBetConfig(); });
-                            document.getElementById('autoBetInterval')?.addEventListener('change', saveAutoBetConfig);
-                            document.getElementById('autoBetMinConf')?.addEventListener('change', saveAutoBetConfig);
-                            document.getElementById('autoBetMapL')?.addEventListener('change', saveAutoBetConfig);
-                            document.getElementById('autoBetMapN')?.addEventListener('change', saveAutoBetConfig);
-                            document.getElementById('autoBetDry')?.addEventListener('change', saveAutoBetConfig);
-                            document.getElementById('tgBotToken')?.addEventListener('change', saveAutoBetConfig);
-                            document.getElementById('tgChatId')?.addEventListener('change', saveAutoBetConfig);
-                            document.getElementById('tgEnable')?.addEventListener('change', saveAutoBetConfig);
-                            document.getElementById('autoBetTemplate')?.addEventListener('change', saveAutoBetConfig);
-                            document.getElementById('martingaleEnable')?.addEventListener('change', saveAutoBetConfig);
-                            document.getElementById('martingaleSequence')?.addEventListener('change', ()=>{ updateMartingaleSeqPreview(); saveAutoBetConfig(); });
-                            document.getElementById('martingaleSequence')?.addEventListener('input', ()=>{ updateMartingaleSeqPreview(); updateMartingaleStatus(); updateAutoBetAmountDisplay(); });
-                            document.getElementById('martingaleKx1000')?.addEventListener('change', ()=>{ updateMartingaleSeqPreview(); saveAutoBetConfig(); });
-                            const botEl = document.getElementById('tgBotToken');
-                            const chatEl = document.getElementById('tgChatId');
-                            if (botEl && !botEl.value) botEl.value = '6235887765:AAGcOHjay_qbixFwxOvJ4z_jxF6YAPIwAbI';
-                            if (chatEl && !chatEl.value) chatEl.value = '5452089308';
-                            try {
-                                autoBetLastIssue = localStorage.getItem('vn168_lastBetIssue')||'';
-                                autoBetLastPred = localStorage.getItem('vn168_lastBetPred')||'';
-                                autoBetLastBetTime = Number(localStorage.getItem('vn168_lastBetTime')||0);
-                                const lastAmt = localStorage.getItem('vn168_lastBetAmount')||'';
-                                const lastTime = localStorage.getItem('vn168_lastBetTime')||'';
-                                if (autoBetLastIssue && lastAmt) {
-                                    updateAutoBetLastBox(autoBetLastIssue, autoBetLastPred, lastAmt, 'Đã đặt lúc '+ (lastTime ? new Date(Number(lastTime)).toLocaleString('vi-VN') : 'trước đó'));
-                                }
-                            } catch(e){}
-                            installAutoBetHook();
-                            loadMartingale();
-                            updateAutoBetAmountDisplay();
-                            updateMartingaleSeqPreview();
-                            restartAutoBetTimer();
-                            autoBetLog('🤖 Auto-bet 28s sẵn sàng | Tiền: '+formatMoney(document.getElementById('autoBetAmount')?.value||1000)+' | Chu kỳ 28s | Gấp thếp '+(martingaleState.enabled?'BẬT dãy '+martingaleState.sequence.join('-'):'TẮT'));
-                        } catch(e){ console.log(e); }
-                    }, 1200);
-                    
-                    // hook tự dự đoán sau mỗi lần tìm trùng
-                    
-                    
                     /* ================= 4 Ô DỰ ĐOÁN =================
                        - Luôn 4 ô, ghép 1-1 với 4 số "phía sau đoạn trùng" (4 ô bị viền xanh trên bảng)
                        - Giá trị ô = CHỮ SỐ (0-9) NGAY PHÍA SAU đoạn trùng khớp gần nhất (dự đoán 4 kỳ tiếp theo)
@@ -6772,7 +6114,7 @@
                     try { renderPredictLog(); } catch(e){}
                     try { tryResolveAllPendingPredictLogs(); } catch(e){}
                     try { backfillPredictLogFromBoard(); } catch(e){}
-                    try { syncGameClock(true); updateGameClockUI(); onMartingaleInput(); } catch(e){}
+                    try { syncGameClock(true); updateGameClockUI(); } catch(e){}
                     try { renderMatchBoxes(); } catch(e){}
                     try { updateLastResolveLine(); } catch(e){}
                     try { renderSegInputs(false); } catch(e){}
@@ -6791,6 +6133,7 @@
                     refreshDates();
                     mainInput.focus();
                     startRealtimeSync();
+                    try { if (netHardBlock) showCorsBar(); } catch (e) {}
                     // refresh lịch sử dự đoán + ô cuối mỗi 1s
                     setInterval(function(){
                         try {
@@ -6840,4 +6183,4 @@
                         });
                 </script>
    
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4afc9be1be8e2fa',t:'MTc5MjA3NzQxOQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a55c5f5d7bd4b453',t:'MTc5Mzg4NzA5OA=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a55c5f5d7bd4b453',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4afc9be1be8e2fa',t:'MTc5MjA3NzQxOQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
