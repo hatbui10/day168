@@ -672,24 +672,16 @@
                 <!-- 📋 BẢNG DỮ LIỆU GAME + TRA ĐOẠN 5 SỐ -->
                 <div id="dataTablePanel" class="cell-history-panel" style="background:#10131f;border-color:#a78bfa;width:560px;max-width:98%">
                     <div class="ch-head" style="color:#a78bfa;display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px">
-                        <span>📋 Tra đoạn 5 số trong kho</span>
+                        <span>📋 Tra đoạn 8 số trong kho</span>
                         <span class="ch-count" id="dataTableCount">0 kỳ</span>
                     </div>
-                    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:6px 0">
-                        <button class="btn-mini" onclick="gameLoad100Pages()" style="background:#1e40af;border-color:#60a5fa;font-weight:bold">⬇️ Tải 100 trang</button>
-                        <button class="btn-mini" onclick="clearSegInput()">🔄 Vẽ lại</button>
-                        <button class="btn-mini" onclick="exportDataTable()">📤 Xuất bảng</button>
-                        <button class="btn-mini" onclick="fbSegIdxSaveManual()" style="background:#0c4a6e;border-color:#38bdf8;font-weight:bold">☁️ Cập nhật chỉ mục</button>
-                        <button class="btn-mini" onclick="exportArchiveTxt()" style="background:#78350f;border-color:#fbbf24;font-weight:bold">📄 Xuất kho ra TXT</button>
-                        <button class="btn-mini" onclick="copyArchiveTxt()" style="background:#3f3f46;border-color:#a1a1aa;font-weight:bold">📋 Copy kho ra clipboard</button>
-                    </div>
 
-                    <!-- 🔎 Ô NHẬP (2-6 ô) + 5 số phía sau để tra -->
+                    <!-- 🔎 Ô NHẬP (2-6 ô, mặc định 3) + 5 số phía sau để tra -->
                     <div style="background:#0b1220;border:1px solid #4c1d95;border-radius:8px;padding:6px 8px;margin-bottom:6px">
                         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:5px">
                             <label style="font-size:11px;color:#e9d5ff;font-weight:bold">Số ô nhập:</label>
                             <span class="dd-wrap">
-                                <button type="button" class="dd-btn" id="segLenBtn">2 ô ▾</button>
+                                <button type="button" class="dd-btn" id="segLenBtn">3 ô ▾</button>
                                 <div class="dd-list" id="segLenList" style="display:none">
                                     <div class="dd-item" data-val="2">2 ô</div>
                                     <div class="dd-item" data-val="3">3 ô</div>
@@ -699,13 +691,13 @@
                                 </div>
                             </span>
                             <select id="segLen" class="dd-hidden-sel" onchange="onSegLenChange()">
-                                <option value="2" selected>2 ô</option>
-                                <option value="3">3 ô</option>
+                                <option value="2">2 ô</option>
+                                <option value="3" selected>3 ô</option>
                                 <option value="4">4 ô</option>
                                 <option value="5">5 ô</option>
                                 <option value="6">6 ô</option>
                             </select>
-                            <span id="segLenInfo" style="font-size:10px;color:#94a3b8">→ đoạn 7 số (2 số đầu nhập + 5 số phía sau)</span>
+                            <span id="segLenInfo" style="font-size:10px;color:#94a3b8">→ đoạn 8 số (3 số đầu nhập + 5 số phía sau)</span>
                         </div>
                         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:5px">
                             <label style="font-size:11px;color:#e9d5ff;font-weight:bold">Sắp xếp kết quả:</label>
@@ -3330,7 +3322,7 @@
                     function segPrefixLen() {
                         const el = document.getElementById('segLen');
                         let n = parseInt(el && el.value, 10);
-                        if (!(n >= 2 && n <= 6)) n = 2;
+                        if (!(n >= 2 && n <= 6)) n = 3;
                         return n;
                     }
                     function segTotalLen() { return segPrefixLen() + SEG_TAIL; }
@@ -6848,4 +6840,4 @@
                         });
                 </script>
    
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4afc9be1be8e2fa',t:'MTc5MjA3NzQxOQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a415c7cb5c901c41',t:'MTc5MDQ2MjUzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4afc9be1be8e2fa',t:'MTc5MjA3NzQxOQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a55c5f5d7bd4b453',t:'MTc5Mzg4NzA5OA=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a55c5f5d7bd4b453',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></html>
