@@ -2328,12 +2328,64 @@
                             return doc.exists ? (doc.data() || {}) : null;
                         } catch (e) { return null; }
                     }
+                    /* ☁️ KHO TRÊN FIREBASE (dùng khi CHỈ MỤC bị chặn quyền đọc)
+                       Đọc các khối vault 5000 kỳ/lần, ghép lại rồi tra bình thường → vẫn tra được trên điện thoại.
+                       Chỉ chạy 1 lần/phiên (nhớ trong bộ nhớ), sau đó kho nằm trong máy luôn. */
+                    let fbVaultLoading = null, fbVaultLoaded = false;
+                    async function fbVaultEnsure(showInfo) {
+                        if (gameArchive.length >= 100) { fbVaultLoaded = true; return true; }
+                        if (fbVaultLoaded) return gameArchive.length > 0;
+                        if (fbVaultLoading) return fbVaultLoading;
+                        fbVaultLoading = (async function () {
+                            try {
+                                if (!fbDB) return false;
+                                if (showInfo) showInfo('☁️ Đang tải kho từ Firebase về máy (1 lần)…');
+                                const snap = await fbDB.collection(FB_ARCHIVE_COL).get();
+                                if (!snap || snap.empty) { fbVaultLoaded = true; return false; }
+                                const chunks = [];
+                                snap.forEach(function (doc) {
+                                    const d = doc.data() || {};
+                                    if (typeof d.idx === 'number' && typeof d.items === 'string') chunks.push(d);
+                                });
+                                chunks.sort(function (a, b) { return a.idx - b.idx; });
+                                const seen = new Set(gameArchiveKeys), merged = gameArchive.slice();
+                                let added = 0;
+                                for (const c of chunks) {
+                                    const parts = String(c.items).split('|');
+                                    for (let k = 0; k < parts.length; k++) {
+                                        const e = decEntry(parts[k]);
+                                        if (!e || seen.has(e.i)) continue;
+                                        seen.add(e.i); merged.push(e); added++;
+                                    }
+                                }
+                                merged.sort(function (a, b) { return compareIssue(b.i, a.i); });
+                                gameArchive = merged.slice(0, GAME_ARCHIVE_MAX);
+                                gameArchiveKeys = new Set(gameArchive.map(function (e) { return e.i; }));
+                                fbVaultLoaded = true;
+                                try { saveGameArchive(); renderGameArchiveInfo(); renderCellHistory(); renderDataTable('latest'); } catch (e) {}
+                                try { fbArchStatus('☁️ Đã tải kho từ Firebase: ' + gameArchive.length + ' kỳ' + (added ? (' (+' + added + ' kỳ mới)') : '')); } catch (e) {}
+                                return gameArchive.length > 0;
+                            } catch (e) {
+                                return false;
+                            } finally { fbVaultLoading = null; }
+                        })();
+                        return fbVaultLoading;
+                    }
                     // ☁️ TRA ĐOẠN TRỰC TIẾP TRÊN FIREBASE — chỉ đọc 1 doc nhỏ
-                    async function segSearchFirebase(prefix) {
+                    async function segSearchFirebase(prefix, showInfo) {
                         if (!fbDB) return null;
                         const want = prefix.join('');
                         const key = want.slice(0, 2);
-                        const doc = await fbDB.collection(FB_SEGIDX_COL).doc('p_' + key).get();
+                        let doc = null;
+                        try {
+                            doc = await fbDB.collection(FB_SEGIDX_COL).doc('p_' + key).get();
+                        } catch (e) {
+                            // 🔒 BỊ CHẶN QUYỀN ĐỌC chỉ mục → tải kho từ Firebase rồi tra trên máy
+                            if (showInfo) showInfo('☁️ Chỉ mục bị chặn quyền — đang tải kho từ Firebase về máy…');
+                            const ok = await fbVaultEnsure(showInfo);
+                            if (ok) return { local: true, segs: findSegments(prefix), total: gameArchive.length };
+                            throw e;
+                        }
                         if (!doc.exists) return { missing: true, segs: [], total: 0 };
                         const d = doc.data() || {};
                         const parts = String(d.items || '').split(','), segs = [];
@@ -2900,11 +2952,16 @@
                                     }
                                     findSegmentsFromInput();
                                 } else {
-                                    dataTableSeg = null; dataTableFbSegs = null; renderDataTable('latest');
-                                    if (info) {
-                                        info.style.color = '#f87171';
-                                        info.textContent = '☁️ Chưa có chỉ mục trên Firebase — bấm "⬇️ Tải 100 trang" (1 lần) để dựng, sau đó tra liền không cần tải nữa.';
-                                    }
+                                    // ☁️ Không có chỉ mục (hoặc bị chặn quyền đọc) → kéo KHO từ Firebase rồi lấy số tại chỗ
+                                    if (info) { info.style.color = '#94a3b8'; info.textContent = '☁️ Đang tải kho từ Firebase về máy…'; }
+                                    fbVaultEnsure(function (m) { if (info) info.textContent = m; }).then(function (ok) {
+                                        if (ok) { segTakeLast(); return; }
+                                        dataTableSeg = null; dataTableFbSegs = null; renderDataTable('latest');
+                                        if (info) {
+                                            info.style.color = '#f87171';
+                                            info.textContent = '☁️ Firebase chưa có kho để tra (hoặc bị chặn quyền đọc) — bấm "⬇️ Tải 100 trang" khi có token để tạo kho.';
+                                        }
+                                    });
                                 }
                             }).catch(function () {
                                 dataTableSeg = null; dataTableFbSegs = null; renderDataTable('latest');
@@ -3152,7 +3209,13 @@
                         // KHÔNG có kho trong máy -> tra TRỰC TIẾP trên Firebase (chỉ đọc 1 doc nhỏ)
                         if (!fbDB) { dataTableFbSegs = null; renderDataTable('segments'); return; }
                         if (info) { info.style.color = '#94a3b8'; info.textContent = '☁️ Đang tra trên Firebase…'; }
-                        segSearchFirebase(vals).then(function (r) {
+                        const showInfo = function (msg) { if (info) { info.style.color = '#94a3b8'; info.textContent = msg; } };
+                        segSearchFirebase(vals, showInfo).then(function (r) {
+                            if (r && r.local) {                 // đã kéo kho từ Firebase về máy → tra tại chỗ
+                                dataTableFbSegs = null;
+                                renderDataTable('segments');
+                                return;
+                            }
                             if (r && !r.missing) {
                                 dataTableFbSegs = r.segs;
                                 renderDataTable('segments');
