@@ -277,6 +277,7 @@
         let lastInsertedIssue = null;
         let fetchInProgress = false;
         let lastDriftResyncAt = 0;
+        let lastBackfillAttemptAt = 0;
         let currentToken = '';
         let memoryRefreshToken = '';
         let memoryTokenHeader = '';
@@ -367,7 +368,7 @@
         // Lấy 6 Ô CUỐI CÙNG làm chuẩn:
         //   • B = loại của ô CUỐI CÙNG (LỚN nếu 5-9, NHỎ nếu 0-4). A = loại NGƯỢC LẠI của B.
         //   • Đếm nhóm B liền nhau ở ĐUÔI bảng (tối đa 6 ô) → gọi là k.
-        //   • k = 1  → tô ô cuối B và tô ô ĐƠN LẺ A nằm giữa hai ô B: B-A-B.
+        //   • k = 1  → tô ô cuối B và các ô B đứng đơn lẻ khi dò ngược; gặp BB liền nhau thì dừng dò.
         //   • k >= 2 → tô đúng k ô B ở đuôi.
         //   • Quét NGƯỢC về đầu bảng: mỗi đoạn A | B…B (đúng k ô) | A → chỉ tô k ô B ở GIỮA,
         //     gặp nhóm B DÀI HƠN k thì KHÔNG tô và DỪNG quét.
@@ -408,13 +409,20 @@
                     }
                 };
 
-                // Ô cuối khác loại với ô kế cuối: tô cả ô cuối và các ô A đơn lẻ trong mẫu B-A-B.
-                // Ví dụ LỚN-NHỎ-LỚN tô NHỎ ở giữa và LỚN ở cuối; NHỎ-LỚN-NHỎ cũng áp dụng tương tự.
+                // Ô cuối là B đơn lẻ: tô ô cuối rồi dò ngược các ô B đứng đơn lẻ giữa hai ô A.
+                // Gặp nhóm BB (hoặc dài hơn) thì DỪNG: không tô các B đơn ở phía trước nhóm đó.
                 if (k === 1) {
-                    for (let j = n - 2; j >= 1; j--) {
-                        if (t[j] === A && t[j - 1] === B && t[j + 1] === B) mark(j, j);
-                    }
                     mark(n - 1, n - 1);
+                    let p = n - 2;
+                    while (p >= 0) {
+                        if (t[p] !== B) { p--; continue; }
+                        let q = p;
+                        while (q >= 0 && t[q] === B) q--;
+                        const len = p - q;
+                        if (len >= 2) break;
+                        if (q >= 0 && t[q] === A && p + 1 < n && t[p + 1] === A) mark(p, p);
+                        p = q;
+                    }
                     return;
                 }
 
@@ -1189,7 +1197,12 @@
                         const issue = String(rowIssue(row)).trim();
                         if (!byIssue.has(issue)) { byIssue.set(issue, row); fresh++; }
                     }
-                    if (!fresh) break;
+                    if (!fresh) {
+                        // Trang 1 của kiểu phân trang mới thường trùng dữ liệu đã có;
+                        // vẫn phải thử trang 2 vì đó mới là trang chứa kỳ cũ hơn.
+                        if (pageNo === 1) { pageNo++; continue; }
+                        break;
+                    }
                     pageNo++;
                 }
                 if (byIssue.size >= wanted) break;
@@ -1278,7 +1291,10 @@
                 await ensureFreshToken(60000);
                 if (!getToken()) throw new Error('Chưa có token.');
 
-                if (forceFull || !lastInsertedIssue || boardCount === 0) {
+                const incompleteBoard = !lastInsertedIssue || boardCount < TOTAL;
+                const shouldBackfill = incompleteBoard && Date.now() - lastBackfillAttemptAt >= 30000;
+                if (forceFull || shouldBackfill) {
+                    lastBackfillAttemptAt = Date.now();
                     const filled = await refillBoardLatest();
                     if (!filled) throw new Error('Không tìm thấy dữ liệu kết quả.');
                     setStatus('Đã nạp ' + filled + ' kỳ · ' + new Date().toLocaleTimeString('vi-VN', { hour12: false }), 'ok');
