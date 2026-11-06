@@ -24,7 +24,7 @@
             min-height: 100vh;
             min-height: 100dvh;
             padding: 0;
-            display: block;
+            display: flex;
             background: var(--bg);
             color: var(--text);
             font-family: Arial, sans-serif;
@@ -35,6 +35,7 @@
         .board-panel {
             width: max-content;
             max-width: 100%;
+            margin: 0 auto;
             padding: 0;
             border: 0;
             background: transparent;
@@ -366,7 +367,7 @@
         // Lấy 6 Ô CUỐI CÙNG làm chuẩn:
         //   • B = loại của ô CUỐI CÙNG (LỚN nếu 5-9, NHỎ nếu 0-4). A = loại NGƯỢC LẠI của B.
         //   • Đếm nhóm B liền nhau ở ĐUÔI bảng (tối đa 6 ô) → gọi là k.
-        //   • k = 1  → tô ô ĐƠN LẺ A nằm giữa hai ô B: B-A-B (ví dụ LỚN-NHỎ-LỚN → tô NHỎ).
+        //   • k = 1  → tô ô cuối B và tô ô ĐƠN LẺ A nằm giữa hai ô B: B-A-B.
         //   • k >= 2 → tô đúng k ô B ở đuôi.
         //   • Quét NGƯỢC về đầu bảng: mỗi đoạn A | B…B (đúng k ô) | A → chỉ tô k ô B ở GIỮA,
         //     gặp nhóm B DÀI HƠN k thì KHÔNG tô và DỪNG quét.
@@ -407,12 +408,13 @@
                     }
                 };
 
-                // Ô cuối khác loại với ô kế cuối: xét mẫu B-A-B và tô ngay ô A đơn lẻ ở giữa.
-                // Ví dụ LỚN-NHỎ-LỚN tô NHỎ; NHỎ-LỚN-NHỎ tô LỚN. Không tô ô ngoài cùng bên phải.
+                // Ô cuối khác loại với ô kế cuối: tô cả ô cuối và các ô A đơn lẻ trong mẫu B-A-B.
+                // Ví dụ LỚN-NHỎ-LỚN tô NHỎ ở giữa và LỚN ở cuối; NHỎ-LỚN-NHỎ cũng áp dụng tương tự.
                 if (k === 1) {
                     for (let j = n - 2; j >= 1; j--) {
                         if (t[j] === A && t[j - 1] === B && t[j + 1] === B) mark(j, j);
                     }
+                    mark(n - 1, n - 1);
                     return;
                 }
 
@@ -1131,12 +1133,16 @@
             });
         }
 
-        async function fetchResultPage(pageNo, pageSize) {
-            const attempts = [
-                buildResultBody(pageNo, pageSize),
-                Object.assign({}, CFG.payload, { pageNo: pageNo, pageSize: pageSize })
-            ];
-            if (pageNo === 1) attempts.push(CFG.payload);
+        async function fetchResultPage(pageNo, pageSize, scheme) {
+            const paging = scheme || { page: 'pageNo', size: 'pageSize' };
+            const params = { typeId: CFG.payload.typeId };
+            params[paging.page] = pageNo;
+            params[paging.size] = pageSize;
+            const fallbackBody = Object.assign({}, CFG.payload);
+            fallbackBody[paging.page] = pageNo;
+            fallbackBody[paging.size] = pageSize;
+            const attempts = [buildSignedBody(params), fallbackBody];
+            if (pageNo === 1 && paging.page === 'pageNo' && paging.size === 'pageSize') attempts.push(CFG.payload);
             let lastResponse = null;
             let lastError = null;
             for (const body of attempts) {
@@ -1156,44 +1162,74 @@
             const wanted = Math.max(1, Math.min(TOTAL, Math.floor(Number(count) || TOTAL)));
             const pageSize = 100;
             const byIssue = new Map();
-            let pageNo = 1;
+            const schemes = [
+                { page: 'pageNo', size: 'pageSize' },
+                { page: 'page', size: 'pageSize' },
+                { page: 'page', size: 'limit' },
+                { page: 'pageIndex', size: 'pageSize' }
+            ];
             let lastError = null;
-            while (byIssue.size < wanted && pageNo <= 15) {
-                let res;
-                try {
-                    res = await fetchResultPage(pageNo, pageSize);
-                } catch (error) {
-                    lastError = error;
-                    break;
+
+            // Một số phiên bản API dùng tên tham số phân trang khác nhau hoặc trả ít hơn pageSize.
+            // Nếu một kiểu phân trang lặp lại dữ liệu, thử kiểu khác cho tới khi đủ 100 kỳ.
+            for (const scheme of schemes) {
+                let pageNo = 1;
+                while (byIssue.size < wanted && pageNo <= 15) {
+                    let res;
+                    try {
+                        res = await fetchResultPage(pageNo, pageSize, scheme);
+                    } catch (error) {
+                        lastError = error;
+                        break;
+                    }
+                    const rows = findRows(res).filter(function (row) { return String(rowIssue(row) || '').trim(); });
+                    if (!rows.length) break;
+                    let fresh = 0;
+                    for (const row of rows) {
+                        const issue = String(rowIssue(row)).trim();
+                        if (!byIssue.has(issue)) { byIssue.set(issue, row); fresh++; }
+                    }
+                    if (!fresh) break;
+                    pageNo++;
                 }
-                const rows = findRows(res).filter(function (row) { return String(rowIssue(row) || '').trim(); });
-                if (!rows.length) break;
-                let fresh = 0;
-                for (const row of rows) {
-                    const issue = String(rowIssue(row)).trim();
-                    if (!byIssue.has(issue)) { byIssue.set(issue, row); fresh++; }
-                }
-                if (!fresh) break;
-                pageNo++;
+                if (byIssue.size >= wanted) break;
             }
+
             const all = sortRowsOldToNew(Array.from(byIssue.values()));
             if (!all.length && lastError) throw lastError;
             return all.slice(-wanted);
         }
 
         function fillBoardFromRows(rows) {
-            const valid = rows.filter(function (row) { return valueToDigit(rowBitValue(row)) !== null; });
-            if (!valid.length) return 0;
+            const byIssue = new Map();
+
+            // Giữ lại dữ liệu đang có: API trả ít hơn 100 kỳ không được làm trống lại bảng.
+            for (const cell of cells) {
+                const issue = String(cell.sttFull || '').trim();
+                const digit = valueToDigit(cell.value);
+                if (issue && digit !== null) byIssue.set(issue, { issue: issue, digit: digit });
+            }
+            for (const row of rows) {
+                const issue = String(rowIssue(row) || '').trim();
+                const digit = valueToDigit(rowBitValue(row));
+                if (issue && digit !== null) byIssue.set(issue, { issue: issue, digit: digit });
+            }
+            if (!byIssue.size) return 0;
+
+            const merged = Array.from(byIssue.values()).sort(function (a, b) {
+                if (a.issue === b.issue) return 0;
+                return issueGreater(a.issue, b.issue) ? 1 : -1;
+            });
+            const take = merged.slice(-TOTAL);
             clearCellData();
-            const take = valid.slice(-TOTAL);
             const start = TOTAL - take.length;
             for (let k = 0; k < take.length; k++) {
-                const issue = String(rowIssue(take[k])).trim();
-                cells[start + k].value = valueToDigit(rowBitValue(take[k]));
-                cells[start + k].stt = issue.padStart(3, '0').slice(-3);
-                cells[start + k].sttFull = issue;
+                const item = take[k];
+                cells[start + k].value = item.digit;
+                cells[start + k].stt = item.issue.padStart(3, '0').slice(-3);
+                cells[start + k].sttFull = item.issue;
             }
-            lastInsertedIssue = String(rowIssue(take[take.length - 1])).trim();
+            lastInsertedIssue = take[take.length - 1].issue;
             recountBoard();
             renderAll();
             saveBoardLocal();
@@ -1341,5 +1377,5 @@
         }, 30000);
     })();
     </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a56638b15de304de',t:'MTc5Mzk5MDM3Mg=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a56638b15de304de',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>
