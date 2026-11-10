@@ -198,6 +198,288 @@
             margin-top: 12px;
         }
         .dialog-btn.danger { border-color: #b91c1c; background: #7f1d1d; }
+        /* ===== Khung dự đoán Lớn / Nhỏ (nằm dưới bảng) ===== */
+        .predict-panel {
+            width: 0;
+            min-width: 100%;
+            margin-top: 8px;
+            padding: 10px;
+            border-radius: 8px;
+            background: #181818;
+            box-shadow: inset 0 0 0 1px #262626;
+        }
+        .pd-head {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        .pd-label {
+            display: block;
+            color: var(--muted);
+            font-size: 9px;
+            font-weight: 700;
+            line-height: 1.2;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+        }
+        .pd-issue-no {
+            display: block;
+            margin-top: 3px;
+            color: #ffeb3b;
+            font-size: 22px;
+            line-height: 1;
+            font-variant-numeric: tabular-nums;
+        }
+        .pd-clock { text-align: right; }
+        .pd-time {
+            display: block;
+            margin-top: 3px;
+            color: #f8fafc;
+            font-size: 30px;
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: .02em;
+            font-variant-numeric: tabular-nums;
+        }
+        .predict-panel[data-phase="lock"] .pd-time,
+        .predict-panel[data-phase="lock"] .pd-clock .pd-label { color: #f87171; }
+        .pd-bar {
+            height: 4px;
+            margin-top: 8px;
+            overflow: hidden;
+            border-radius: 999px;
+            background: #2a2a2a;
+        }
+        .pd-bar i {
+            display: block;
+            width: 100%;
+            height: 100%;
+            border-radius: inherit;
+            background: #22c55e;
+            transform-origin: left center;
+            transition: transform .2s linear, background-color .2s ease;
+        }
+        .predict-panel[data-phase="lock"] .pd-bar i { background: #ef4444; }
+        .predict-panel[data-phase="wait"] .pd-bar i,
+        .predict-panel[data-phase="off"] .pd-bar i { background: #64748b; }
+        .pd-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .pd-btn {
+            position: relative;
+            min-width: 0;
+            min-height: 62px;
+            padding: 8px 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            border: 2px solid transparent;
+            border-radius: 10px;
+            cursor: pointer;
+            user-select: none;
+            touch-action: manipulation;
+            transition: transform .08s ease, opacity .15s ease, box-shadow .15s ease, filter .15s ease;
+        }
+        .pd-btn-name { font-size: 22px; font-weight: 800; line-height: 1; letter-spacing: .04em; }
+        .pd-btn-range { font-size: 11px; font-weight: 700; line-height: 1; }
+        .pd-big { background: linear-gradient(180deg,#fcd34d 0%,#f59e0b 100%); color: #451a03; }
+        .pd-small { background: linear-gradient(180deg,#2563eb 0%,#1d4ed8 100%); color: #fff; }
+        .pd-btn:focus-visible, .pd-mini:focus-visible { outline: 2px solid #f8fafc; outline-offset: 2px; }
+        .pd-btn:not([aria-disabled="true"]):active { transform: translateY(1px) scale(.99); }
+        @media (hover: hover) {
+            .pd-btn:not([aria-disabled="true"]):hover { filter: brightness(1.1); }
+        }
+        .pd-btn[aria-pressed="true"] {
+            border-color: #fff;
+            box-shadow: 0 0 0 3px rgba(255,255,255,.2), 0 6px 16px rgba(0,0,0,.5);
+        }
+        .pd-btn[aria-pressed="true"]::after {
+            content: '✓ ĐÃ CHỌN';
+            position: absolute;
+            top: -8px;
+            right: 8px;
+            padding: 2px 6px;
+            border-radius: 999px;
+            background: #fff;
+            color: #111827;
+            font-size: 9px;
+            font-weight: 800;
+            line-height: 1.3;
+            letter-spacing: .03em;
+        }
+        .pd-buttons.has-pick .pd-btn[aria-pressed="false"] { opacity: .42; }
+        .pd-btn[aria-disabled="true"] { cursor: not-allowed; }
+        .pd-btn[aria-disabled="true"][aria-pressed="false"] { opacity: .3; filter: grayscale(.45); }
+        .pd-status {
+            min-height: 16px;
+            margin-top: 8px;
+            color: #cbd5e1;
+            font-size: 11px;
+            line-height: 1.45;
+            text-align: center;
+            overflow-wrap: anywhere;
+        }
+        .pd-result {
+            min-height: 54px;
+            margin-top: 8px;
+            padding: 8px 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid #2f2f2f;
+            border-radius: 10px;
+            background: #1f1f1f;
+        }
+        .pd-ball {
+            flex: 0 0 auto;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: #2f2f2f;
+            color: #94a3b8;
+            font-size: 19px;
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+        }
+        .pd-ball[data-kind="B"] { background: linear-gradient(180deg,#fcd34d,#f59e0b); color: #451a03; }
+        .pd-ball[data-kind="S"] { background: linear-gradient(180deg,#2563eb,#1d4ed8); color: #fff; }
+        .pd-result-text { flex: 1 1 auto; min-width: 0; }
+        .pd-result-main { color: #f1f5f9; font-size: 12px; font-weight: 700; line-height: 1.35; }
+        .pd-result-sub { margin-top: 2px; color: var(--muted); font-size: 10px; line-height: 1.35; }
+        .pd-verdict { flex: 0 0 auto; font-size: 18px; font-weight: 800; white-space: nowrap; }
+        .pd-result[data-state="win"] {
+            border-color: #15803d;
+            background: linear-gradient(90deg, rgba(22,163,74,.26), rgba(22,163,74,.07));
+        }
+        .pd-result[data-state="win"] .pd-verdict { color: #4ade80; }
+        .pd-result[data-state="lose"] {
+            border-color: #b91c1c;
+            background: linear-gradient(90deg, rgba(220,38,38,.28), rgba(220,38,38,.07));
+        }
+        .pd-result[data-state="lose"] .pd-verdict { color: #f87171; }
+        .pd-result[data-state="wait"] { border-color: #a16207; }
+        .pd-result[data-state="wait"] .pd-verdict { color: #fbbf24; font-size: 12px; letter-spacing: .05em; }
+        .pd-result[data-state="wait"] .pd-ball { animation: pdBlink 1s ease-in-out infinite; }
+        .pd-result.pd-flash { animation: pdPop .45s ease-out; }
+        @keyframes pdPop {
+            0% { transform: scale(.96); }
+            45% { transform: scale(1.03); }
+            100% { transform: scale(1); }
+        }
+        @keyframes pdBlink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .35; }
+        }
+        .pd-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+            margin-top: 8px;
+        }
+        .pd-stats > div {
+            min-width: 0;
+            padding: 6px 2px;
+            border-radius: 8px;
+            background: #1f1f1f;
+            text-align: center;
+        }
+        .pd-stats b {
+            display: block;
+            color: #f1f5f9;
+            font-size: 15px;
+            line-height: 1.1;
+            font-variant-numeric: tabular-nums;
+        }
+        .pd-stats span {
+            display: block;
+            margin-top: 3px;
+            color: var(--muted);
+            font-size: 9px;
+            letter-spacing: .05em;
+            text-transform: uppercase;
+        }
+        .pd-stats .pd-win, .pd-stats b[data-kind="ok"] { color: #4ade80; }
+        .pd-stats .pd-lose, .pd-stats b[data-kind="no"] { color: #f87171; }
+        .pd-history {
+            min-height: 18px;
+            margin-top: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 3px;
+        }
+        .pd-chip {
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 800;
+            line-height: 1;
+            cursor: default;
+        }
+        .pd-chip.ok { background: #166534; color: #dcfce7; }
+        .pd-chip.no { background: #7f1d1d; color: #fee2e2; }
+        .pd-history-empty { color: #64748b; font-size: 10px; line-height: 18px; }
+        .pd-foot {
+            margin-top: 8px;
+            padding-top: 8px;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
+            border-top: 1px solid #2a2a2a;
+            color: var(--muted);
+            font-size: 10px;
+        }
+        .pd-sync { flex: 1 1 auto; min-width: 0; font-variant-numeric: tabular-nums; }
+        .pd-mini {
+            min-height: 28px;
+            padding: 3px 8px;
+            border: 1px solid #3a3a3a;
+            border-radius: 6px;
+            background: #242424;
+            color: #cbd5e1;
+            cursor: pointer;
+            font-size: 10px;
+            font-weight: 700;
+            touch-action: manipulation;
+        }
+        .pd-mini:hover { filter: brightness(1.18); }
+        .pd-mini:active { transform: translateY(1px); }
+        .pd-mini.armed { border-color: #b91c1c; background: #7f1d1d; color: #fff; }
+        @media (max-width: 380px) {
+            .predict-panel { padding: 8px; }
+            .pd-issue-no { font-size: 19px; }
+            .pd-time { font-size: 26px; }
+            .pd-btn { min-height: 56px; }
+            .pd-btn-name { font-size: 20px; }
+            .pd-verdict { font-size: 16px; }
+            .pd-result { gap: 8px; padding: 8px; }
+            .pd-sync { flex-basis: 100%; }
+            #pdReset { margin-left: auto; }
+        }
+        @media (max-width: 300px) {
+            .pd-time { font-size: 24px; }
+            .pd-btn-name { font-size: 18px; }
+            .pd-ball { width: 30px; height: 30px; font-size: 16px; }
+            .pd-result-main { font-size: 11px; }
+            .pd-verdict { font-size: 14px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .pd-btn, .pd-bar i { transition: none; }
+            .pd-result.pd-flash, .pd-result[data-state="wait"] .pd-ball { animation: none; }
+        }
         @media (max-width: 380px) {
             :root { --cell: 25px; }
             body { padding-inline: 5px; }
@@ -212,11 +494,255 @@
             .grid-cell .val-input { font-size: 12px; }
             .toolbar-actions { gap: 4px; }
         }
+        /* ===== 📋 Tra đoạn số trong kho (ghép từ diemdanh.html) ===== */
+        .seg-wrap {
+            width: 0;
+            min-width: 100%;
+            display: flex;
+            justify-content: center;
+            margin-top: 8px;
+        }
+        .cell-history-panel {
+            flex: 0 0 auto;
+            width: 560px;
+            max-width: calc(var(--seg-avail, 100vw) - 10px);
+            background: #10131f;
+            border: 1px solid #a78bfa;
+            color: #f6f8fb;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+            padding: 8px 10px;
+            text-align: left;
+        }
+        .cell-history-panel label { color: #e0d0ff; }
+        .ch-head {
+            font-size: 12px;
+            color: #a78bfa;
+            font-weight: bold;
+            margin-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        .ch-count { color: #dbe3ec; font-weight: normal; font-size: 11px; }
+        .ch-empty { color: #dbe3ec; text-align: center; padding: 6px 0; font-size: 11px; }
+        .ch-empty b { color: #ffe082; }
+        .seg-box { background: #0b1220; border: 1px solid #4c1d95; border-radius: 8px; padding: 6px 8px; margin-bottom: 6px; }
+        .seg-line { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+        .seg-lbl { font-size: 11px; color: #e9d5ff; font-weight: bold; }
+        .seg-note { font-size: 10px; color: #94a3b8; }
+        .btn-mini {
+            padding: 5px 10px; font-size: 12px; line-height: 1.2;
+            background: #334155; color: #e2e8f0;
+            border: 1px solid #64748b; border-radius: 6px; cursor: pointer;
+            font-family: inherit; white-space: nowrap;
+            transition: background .12s ease, border-color .12s ease, transform .06s ease;
+            -webkit-tap-highlight-color: transparent; user-select: none;
+        }
+        .btn-mini:hover { background: #475569; border-color: #94a3b8; color: #ffffff; }
+        .btn-mini:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(148,163,184,.55); }
+        .btn-mini:active { transform: translateY(1px); filter: brightness(.92); }
+        .btn-mini.seg-find { background: #4a1942; border-color: #d946ef; font-weight: bold; }
+        .btn-mini.seg-take { background: #065f46; border-color: #34d399; font-weight: bold; }
+        /* dropdown tự vẽ (thay <select> gốc: trình duyệt chặn popup của select trong iframe/khung xem) */
+        .dd-wrap { position: relative; display: inline-block; }
+        .dd-btn { background:#0b1220; color:#f0abfc; border:2px solid #7e22ce; border-radius:6px;
+            padding:5px 10px; font-weight:bold; font-size:13px; cursor:pointer; font-family:inherit;
+            white-space:nowrap; line-height:1.2; }
+        .dd-btn:hover { filter: brightness(1.18); }
+        .dd-btn:active { transform: translateY(1px); }
+        .dd-btn.green { color:#4ade80; border-color:#16a34a; }
+        .dd-list { position:absolute; z-index:99999; top:calc(100% + 3px); left:0; min-width:100%;
+            background:#0b1220; border:2px solid #7e22ce; border-radius:6px;
+            box-shadow:0 8px 22px rgba(0,0,0,.65); overflow:hidden; }
+        .dd-item { padding:6px 12px; font-size:12px; color:#e0e0e0; cursor:pointer;
+            white-space:nowrap; font-family:inherit; background:#0b1220; }
+        .dd-item:hover { background:#1e2a4a; color:#ffffff; }
+        .dd-item.on { background:#4a1942; color:#f0abfc; font-weight:bold; }
+        .dd-hidden-sel { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; left:-9999px; }
+        .seg-in { width:46px; height:42px; text-align:center;
+            font-size:20px; font-weight:bold; background:#0b1220; color:#f0abfc;
+            border:2px solid #7e22ce; border-radius:8px; padding:0;
+            font-family:inherit; transition:border-color .12s ease, box-shadow .12s ease; }
+        .seg-in::placeholder { color:#4c1d95; font-size:13px; }
+        .seg-in:hover { border-color:#a855f7; }
+        .seg-in:focus { outline:none; border-color:#e879f9; box-shadow:0 0 0 3px rgba(217,70,239,.28); }
+        .seg-mir { display:inline-flex; align-items:center; justify-content:center;
+            width:46px; height:42px; border-radius:8px;
+            font-size:20px; font-weight:bold; background:#0b1220; color:#475569;
+            border:2px dashed #334155; }
+        .seg-mir.on { color:#f0abfc; border-style:solid; border-color:#7e22ce; background:#1e1b4b; }
+        #dataTableBody { max-height:340px; overflow-y:auto; background:#0d0d0d; border:1px solid #2a2a4a;
+            border-radius:4px; font-family:monospace; font-size:11px; --dt-id:112px; }
+        .dt-head-row { display:flex; gap:10px; padding:3px 6px; background:#16163a; color:#a78bfa;
+            font-weight:bold; font-size:10px; position:sticky; top:0; z-index:2; }
+        .dt-row { display:flex; gap:10px; padding:2px 6px; border-bottom:1px solid rgba(255,255,255,0.04); align-items:center; flex-wrap:wrap; }
+        .dt-row:nth-child(odd) { background: rgba(255,255,255,0.02); }
+        .dt-i { flex:0 0 auto; min-width:var(--dt-id); color:#c4b5fd; white-space:nowrap; }
+        .dt-head-row .dt-i { color:inherit; }
+        .dt-n { letter-spacing:0; font-weight:bold; }
+        .dt-t { color:#64748b; margin-left:auto; padding-left:8px; white-space:nowrap; }
+        .dt-head-row .dt-t { color:inherit; }
+        .dt-boxes { display:flex; gap:5px; flex-wrap:wrap; }
+        .dt-box { display:inline-flex; align-items:center; justify-content:center;
+            width:24px; height:24px; border-radius:5px; font-weight:bold; font-size:13px;
+            border:1px solid rgba(148,163,184,0.55); background:#1b2333; color:#c7d2fe;
+            box-shadow:0 0 5px rgba(148,163,184,0.28); }
+        .dt-box.hit  { background:#3b2a5e; color:#f3e8ff; border-color:#c4b5fd;
+            box-shadow:0 0 7px rgba(196,181,253,0.55); }
+        .dt-box.rest { background:#e9edf5; color:#7f1d1d; border-color:#ffffff;
+            box-shadow:0 0 7px rgba(255,255,255,0.45); }
+        /* khung hẹp: không đủ chỗ cho "kỳ + các ô số" trên 1 dòng → dòng 1 = kỳ đầu … kỳ cuối · giờ, dòng 2 = các ô số */
+        #dataTableBody.dt-stack .dt-row .dt-t { order: 2; padding-left: 0; }
+        #dataTableBody.dt-stack .dt-row .dt-n { order: 3; flex: 0 0 100%; }
+        #dataTableBody.dt-stack .dt-head-row .dt-n { display: none; }
+        @media (max-width: 400px) {
+            .cell-history-panel { padding: 8px 6px; }
+            .dt-row, .dt-head-row { gap: 6px; }
+            .dt-boxes { gap: 4px; }
+        }
+        @media (max-width: 380px) {
+            #dataTableBody { font-size: 10.5px; --dt-id: 107px; }
+        }
+        @media (max-width: 340px) {
+            #dataTableBody { font-size: 9.5px; --dt-id: 97px; }
+            .dt-head-row { font-size: 9px; }
+            .seg-in, .seg-mir { width: 40px; height: 40px; font-size: 18px; }
+            .dt-box { width: 21px; height: 21px; font-size: 12px; }
+            .dt-boxes { gap: 3px; }
+            .dd-btn { font-size: 12px; padding: 5px 8px; }
+        }
+        @media (max-width: 300px) {
+            #segInputs { gap: 5px; }
+            .seg-in, .seg-mir { width: 35px; height: 38px; font-size: 17px; }
+            .dt-box { width: 20px; height: 20px; font-size: 11.5px; }
+            .dt-boxes { gap: 2px; }
+        }
     </style>
 </head>
 <body>
     <main class="board-panel" aria-label="Bảng kết quả 100 kỳ">
         <div id="gridContainer" class="grid-table" role="grid" aria-label="Bảng 10 dòng và 10 cột"></div>
+
+        <!-- 📋 TRA ĐOẠN SỐ TRONG KHO (ghép từ diemdanh.html) -->
+        <div class="seg-wrap">
+            <div id="dataTablePanel" class="cell-history-panel" aria-label="Tra đoạn số trong kho">
+                <div class="ch-head">
+                    <span id="segTitle">📋 Tra đoạn 9 số trong kho</span>
+                    <span class="ch-count" id="dataTableCount">0 kỳ</span>
+                </div>
+
+                <div class="seg-box">
+                    <div class="seg-line" style="margin-bottom:5px">
+                        <label class="seg-lbl">Số ô nhập:</label>
+                        <span class="dd-wrap">
+                            <button type="button" class="dd-btn" id="segLenBtn">4 ô ▾</button>
+                            <div class="dd-list" id="segLenList" style="display:none">
+                                <div class="dd-item" data-val="2">2 ô</div>
+                                <div class="dd-item" data-val="3">3 ô</div>
+                                <div class="dd-item" data-val="4">4 ô</div>
+                                <div class="dd-item" data-val="5">5 ô</div>
+                                <div class="dd-item" data-val="6">6 ô</div>
+                            </div>
+                        </span>
+                        <select id="segLen" class="dd-hidden-sel" tabindex="-1" aria-hidden="true">
+                            <option value="2">2 ô</option>
+                            <option value="3">3 ô</option>
+                            <option value="4" selected>4 ô</option>
+                            <option value="5">5 ô</option>
+                            <option value="6">6 ô</option>
+                        </select>
+                        <span id="segLenInfo" class="seg-note">→ đoạn 9 số (4 số đầu nhập + 5 số cuối tra)</span>
+                    </div>
+                    <div class="seg-line" style="margin-bottom:5px">
+                        <label class="seg-lbl">Sắp xếp kết quả:</label>
+                        <span class="dd-wrap">
+                            <button type="button" class="dd-btn green" id="segSortBtn">🆔 Kỳ lớn nhất trên cùng ▾</button>
+                            <div class="dd-list" id="segSortList" style="display:none">
+                                <div class="dd-item" data-val="issue">🆔 Kỳ lớn nhất trên cùng</div>
+                                <div class="dd-item" data-val="value">🔢 Số lớn nhất trên cùng</div>
+                                <div class="dd-item" data-val="sum">➕ Tổng lớn nhất trên cùng</div>
+                            </div>
+                        </span>
+                        <select id="segSort" class="dd-hidden-sel" tabindex="-1" aria-hidden="true">
+                            <option value="issue" selected>🆔 Kỳ lớn nhất trên cùng</option>
+                            <option value="value">🔢 Số lớn nhất trên cùng</option>
+                            <option value="sum">➕ Tổng lớn nhất trên cùng</option>
+                        </select>
+                        <span id="segSortInfo" class="seg-note">Kỳ lớn nhất trên cùng, bé dần xuống dưới (theo ID kỳ xổ)</span>
+                    </div>
+                    <div class="seg-lbl" style="margin-bottom:4px">🔎 Nhập các số đầu:</div>
+                    <div class="seg-line">
+                        <div id="segInputs" class="seg-line"></div>
+                    </div>
+                    <div class="seg-note" style="margin-top:3px">🧾 Bấm <b style="color:#4ade80">Lấy số</b> = lấy các ô CUỐI của hàng 10 số trên bảng, đọc từ <b>trái → phải</b> (trái = cũ, phải = <b style="color:#fbbf24">mới nhất</b> trong kết quả game).</div>
+                    <div class="seg-line" style="margin-top:7px">
+                        <span style="font-size:11px;color:#94a3b8;font-weight:bold">⬇️ Copy xuống 4 ô:</span>
+                        <span id="segMirror" style="display:flex;gap:6px"></span>
+                    </div>
+                    <div class="seg-line" style="margin-top:5px">
+                        <button type="button" class="btn-mini seg-find" id="segBtnFind">🔎 Tìm đoạn</button>
+                        <button type="button" class="btn-mini seg-take" id="segBtnTake">🧾 Lấy số</button>
+                        <button type="button" class="btn-mini" id="segBtnClear">✖ Xoá</button>
+                    </div>
+                    <div id="segInfo" class="seg-note" style="margin-top:4px">Chọn số ô nhập hoặc bấm "🧾 Lấy số" — các số cuối cùng trên bảng sẽ tự điền và hiện kết quả. Nhập xong ô cuối: copy xuống 4 ô, ô nhập tự trống và bàn phím tự tắt — bấm vào ô đầu để nhập tiếp.</div>
+                </div>
+
+                <div id="dataTableBody"></div>
+            </div>
+        </div>
+
+        <section class="predict-panel" id="pdPanel" data-phase="off" aria-label="Dự đoán Lớn / Nhỏ">
+            <div class="pd-head">
+                <div>
+                    <span class="pd-label">Kỳ đang chạy</span>
+                    <strong class="pd-issue-no" id="pdIssue">---</strong>
+                </div>
+                <div class="pd-clock" role="timer" aria-live="off">
+                    <span class="pd-label" id="pdClockLabel">Còn lại</span>
+                    <strong class="pd-time" id="pdTime">00:00</strong>
+                </div>
+            </div>
+            <div class="pd-bar" aria-hidden="true"><i id="pdBar"></i></div>
+
+            <div class="pd-buttons" id="pdButtons">
+                <button type="button" class="pd-btn pd-big" id="pdBtnBig" aria-pressed="false" aria-disabled="true">
+                    <span class="pd-btn-name">LỚN</span>
+                    <span class="pd-btn-range">5 – 9</span>
+                </button>
+                <button type="button" class="pd-btn pd-small" id="pdBtnSmall" aria-pressed="false" aria-disabled="true">
+                    <span class="pd-btn-name">NHỎ</span>
+                    <span class="pd-btn-range">0 – 4</span>
+                </button>
+            </div>
+            <div class="pd-status" id="pdStatus" role="status" aria-live="polite"></div>
+
+            <div class="pd-result" id="pdResult" data-state="idle">
+                <span class="pd-ball" id="pdBall" aria-hidden="true">?</span>
+                <div class="pd-result-text">
+                    <div class="pd-result-main" id="pdResultMain">Chưa có kết quả</div>
+                    <div class="pd-result-sub" id="pdResultSub"></div>
+                </div>
+                <strong class="pd-verdict" id="pdVerdict"></strong>
+            </div>
+
+            <div class="pd-stats">
+                <div><b class="pd-win" id="pdWin">0</b><span>Đúng</span></div>
+                <div><b class="pd-lose" id="pdLose">0</b><span>Sai</span></div>
+                <div><b id="pdRate">–</b><span>Tỉ lệ</span></div>
+                <div><b id="pdStreak">–</b><span>Chuỗi</span></div>
+            </div>
+            <div class="pd-history" id="pdHistory" role="list" aria-label="Các dự đoán gần đây"></div>
+
+            <div class="pd-foot">
+                <span class="pd-sync" id="pdSync">Giờ thiết bị</span>
+                <button type="button" class="pd-mini" id="pdAdjMinus" title="Game còn ít giây hơn đồng hồ này: trừ 1 giây">−1s</button>
+                <button type="button" class="pd-mini" id="pdAdjPlus" title="Game còn nhiều giây hơn đồng hồ này: cộng 1 giây">+1s</button>
+                <button type="button" class="pd-mini" id="pdReset">Xoá thống kê</button>
+            </div>
+        </section>
         <div hidden aria-hidden="true">
             <span id="boardCount">0/100 kỳ</span>
             <span id="boardStatus" role="status" aria-live="polite"></span>
@@ -445,6 +971,7 @@
             for (let i = 0; i < TOTAL; i++) renderCell(i);
             applyPatHighlight();
             updateBoardCount();
+            try { pdOnBoardChanged(); } catch (e) {}
         }
 
         function recountBoard() {
@@ -848,6 +1375,8 @@
             let fallbackResponse = null;
             let fallbackText = '';
             let lastNetworkError = null;
+            let responseSentAt = 0;
+            let responseHeadAt = 0;
 
             for (let i = 0; i < candidates.length; i++) {
                 const candidate = candidates[i];
@@ -858,12 +1387,14 @@
                         controller = new AbortController();
                         timer = setTimeout(function () { controller.abort(); }, 15000);
                     }
+                    const sentAt = Date.now();
                     const res = await fetch(candidate.url, {
                         method: 'POST',
                         headers: headers,
                         body: JSON.stringify(body),
                         signal: controller ? controller.signal : undefined
                     });
+                    const headAt = Date.now();
                     const text = await res.text();
                     if (timer) clearTimeout(timer);
                     if (!res.ok && res.status !== 401 && !looksLikeApiJson(text)) {
@@ -872,6 +1403,8 @@
                     }
                     response = res;
                     responseText = text;
+                    responseSentAt = sentAt;
+                    responseHeadAt = headAt;
                     break;
                 } catch (error) {
                     if (timer) clearTimeout(timer);
@@ -897,11 +1430,15 @@
                 throw apiError(response.status === 401 ? 'auth' : 'http', 'HTTP ' + response.status + ' · ' + responseText.slice(0, 120).replace(/\s+/g, ' '), response.status);
             }
             if (!responseText) throw apiError('json', 'API trả về phản hồi rỗng.', response.status);
-            try { return JSON.parse(responseText); }
+            let parsedJson;
+            try { parsedJson = JSON.parse(responseText); }
             catch (e) {
                 const isHtml = /^\s*<(!doctype|html|head|body|script)/i.test(responseText);
                 throw apiError(isHtml ? 'html' : 'json', isHtml ? 'API trả về trang HTML thay vì dữ liệu.' : 'Phản hồi JSON không hợp lệ.', response.status);
             }
+            // Giờ máy chủ (nếu API có trả) để đồng hồ đếm ngược của khung dự đoán khớp với game.
+            if (responseSentAt) { try { pdNoteServerTime(parsedJson, responseSentAt, responseHeadAt); } catch (e) {} }
+            return parsedJson;
         }
 
         async function apiPostRetry(url, body, tries, gapMs) {
@@ -1290,6 +1827,7 @@
             try {
                 await ensureFreshToken(60000);
                 if (!getToken()) throw new Error('Chưa có token.');
+                const pdFetchStartedAt = Date.now();
 
                 const incompleteBoard = !lastInsertedIssue || boardCount < TOTAL;
                 const shouldBackfill = incompleteBoard && Date.now() - lastBackfillAttemptAt >= 30000;
@@ -1297,6 +1835,7 @@
                     lastBackfillAttemptAt = Date.now();
                     const filled = await refillBoardLatest();
                     if (!filled) throw new Error('Không tìm thấy dữ liệu kết quả.');
+                    pdNoteFetchOk(pdFetchStartedAt);
                     setStatus('Đã nạp ' + filled + ' kỳ · ' + new Date().toLocaleTimeString('vi-VN', { hour12: false }), 'ok');
                     return;
                 }
@@ -1304,6 +1843,7 @@
                 const res = await fetchResultPage(1, 100);
                 const sorted = sortRowsOldToNew(findRows(res));
                 if (!sorted.length) throw new Error('Không tìm thấy dữ liệu kết quả.');
+                pdNoteFetchOk(pdFetchStartedAt);
                 const toAppend = sorted.filter(function (row) {
                     return issueGreater(String(rowIssue(row) || ''), String(lastInsertedIssue || ''));
                 });
@@ -1376,9 +1916,1240 @@
         });
         refreshBtn.addEventListener('click', function () { refreshResults(true, true); });
 
+        // =====================================================================
+        // KHUNG DỰ ĐOÁN LỚN / NHỎ (nằm dưới bảng)
+        //  • Đếm ngược theo từng kỳ của game: mỗi kỳ dài PD_ROUND_SEC giây, mốc kỳ tính theo giờ máy chủ
+        //    (trường serviceNowTime trong phản hồi API). API không trả giờ → dùng đồng hồ thiết bị;
+        //    có nút −1s / +1s để chỉnh tay nếu thấy lệch so với game.
+        //  • Còn PD_LOCK_SEC giây cuối kỳ thì khoá chọn (giống game).
+        //  • Dự đoán gắn với kỳ đang chạy; kết quả kỳ đó về bảng → chấm ĐÚNG / SAI, lưu thống kê trên máy.
+        // =====================================================================
+        const PD_ROUND_SEC = ({ 1: 60, 2: 180, 3: 300, 4: 600, 30: 30 })[CFG.payload.typeId] || 30;
+        const PD_ROUND_MS = PD_ROUND_SEC * 1000;
+        const PD_LOCK_SEC = 5;                  // số giây cuối kỳ bị khoá chọn
+        const PD_GUARD_MS = Math.min(10000, Math.floor(PD_ROUND_MS / 3));
+        const PD_SETTLE_MS = 4000;              // đầu kỳ: chờ tối đa chừng này cho kết quả kỳ trước
+        const PD_HISTORY_MAX = 200;
+        const PD_CHIPS = 30;
+        const LS_PREDICT = 'vn168_predict_v1';
+
+        const pdEl = {};
+        ['Panel', 'Issue', 'Time', 'ClockLabel', 'Bar', 'Buttons', 'BtnBig', 'BtnSmall', 'Status', 'Result', 'Ball',
+            'ResultMain', 'ResultSub', 'Verdict', 'Win', 'Lose', 'Rate', 'Streak', 'History', 'Sync', 'AdjMinus',
+            'AdjPlus', 'Reset'].forEach(function (name) { pdEl[name] = document.getElementById('pd' + name); });
+
+        // pending: các dự đoán chưa có kết quả · history: các dự đoán đã chấm · adj: số ms chỉnh tay đồng hồ.
+        let pdState = { pending: [], history: [], win: 0, lose: 0, streak: 0, adj: 0 };
+        let pdReady = false;
+        let pdSeenNewest = '';
+        let pdNewestSeenAt = 0;                 // lúc kỳ mới nhất "về" bảng (0 = không rõ)
+        let pdFetchOkAt = 0;                    // lần hỏi API thành công gần nhất (tính theo lúc gửi)
+        let pdLastBurstAt = 0;
+        let pdLastSynced = null;
+        let pdSyncOk = false;
+        let pdSyncBad = false;
+        let pdSyncMiss = 0;
+        let pdOffLo = 0;
+        let pdOffHi = 0;
+        let pdOffMid = 0;                       // giờ máy chủ − giờ thiết bị (ms, đã bỏ múi giờ)
+        let pdNotice = '';
+        let pdNoticeUntil = 0;
+        let pdHistoryDirty = true;
+        let pdBannerKey = '';
+        let pdResetArmedUntil = 0;
+
+        function pdKind(digit) {
+            const text = String(digit === null || digit === undefined ? '' : digit);
+            if (!/^[0-9]$/.test(text)) return '';
+            return Number(text) >= 5 ? 'B' : 'S';
+        }
+        function pdKindName(kind) { return kind === 'B' ? 'LỚN' : (kind === 'S' ? 'NHỎ' : '?'); }
+        function pdShort(issue) { const s = String(issue || ''); return s ? s.padStart(3, '0').slice(-3) : '---'; }
+        function pdPad2(n) { return (n < 10 ? '0' : '') + n; }
+        function pdMod(a, n) { return ((a % n) + n) % n; }
+        function pdText(el, text) { if (el.textContent !== text) el.textContent = text; }
+        function pdAttr(el, name, value) { if (el.getAttribute(name) !== value) el.setAttribute(name, value); }
+        function pdSetNotice(text) { pdNotice = text; pdNoticeUntil = Date.now() + 6000; }
+
+        function pdNewestIssue() {
+            const cell = cells[TOTAL - 1];
+            return cell && cell.sttFull && pdKind(cell.value) ? String(cell.sttFull) : '';
+        }
+
+        // Số kỳ kế tiếp (chỉ để hiển thị). Kỳ cuối ngày YYYYMMDD…NNNN → kỳ 0001 của ngày hôm sau.
+        function pdNextIssue(issue) {
+            const s = String(issue || '');
+            if (!/^\d+$/.test(s)) return '';
+            const perDay = Math.round(86400000 / PD_ROUND_MS);
+            if (s.length >= 13 && perDay <= 9999 && Number(s.slice(-4)) === perDay) {
+                const y = Number(s.slice(0, 4));
+                const m = Number(s.slice(4, 6));
+                const d = Number(s.slice(6, 8));
+                if (y >= 2000 && y < 2100 && m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+                    const next = new Date(Date.UTC(y, m - 1, d + 1));
+                    return String(next.getUTCFullYear()) + pdPad2(next.getUTCMonth() + 1) + pdPad2(next.getUTCDate())
+                        + s.slice(8, -4) + '0001';
+                }
+            }
+            const digits = s.split('');
+            let i = digits.length - 1;
+            while (i >= 0 && digits[i] === '9') { digits[i] = '0'; i--; }
+            if (i < 0) digits.unshift('1');
+            else digits[i] = String(Number(digits[i]) + 1);
+            return digits.join('');
+        }
+
+        function pdLoad() {
+            try {
+                const raw = JSON.parse(localStorage.getItem(LS_PREDICT) || 'null');
+                if (!raw || typeof raw !== 'object') return;
+                const num = function (v) { v = Number(v); return Number.isFinite(v) ? v : 0; };
+                let adj = Math.round(num(raw.adj) / 1000) * 1000;
+                if (Math.abs(adj) > PD_ROUND_MS / 2) adj = 0;
+                pdState = {
+                    pending: (Array.isArray(raw.pending) ? raw.pending : []).filter(function (p) {
+                        return p && (p.c === 'B' || p.c === 'S') && p.base && Number.isFinite(Number(p.endAt));
+                    }).map(function (p) {
+                        return { c: p.c, base: String(p.base), issue: String(p.issue || ''), endAt: Number(p.endAt), at: num(p.at) };
+                    }).slice(-5),
+                    history: (Array.isArray(raw.history) ? raw.history : []).filter(function (h) {
+                        return h && (h.c === 'B' || h.c === 'S') && h.issue && pdKind(h.d);
+                    }).map(function (h) {
+                        return { issue: String(h.issue), c: h.c, d: String(h.d), ok: !!h.ok, at: num(h.at) };
+                    }).slice(-PD_HISTORY_MAX),
+                    win: Math.max(0, Math.floor(num(raw.win))),
+                    lose: Math.max(0, Math.floor(num(raw.lose))),
+                    streak: Math.trunc(num(raw.streak)),
+                    adj: adj
+                };
+            } catch (e) {}
+        }
+
+        function pdSave() {
+            try { localStorage.setItem(LS_PREDICT, JSON.stringify(pdState)); } catch (e) {}
+        }
+
+        // ----- Đồng bộ giờ máy chủ -----
+        // Nhận số epoch (giây / mili-giây) hoặc chuỗi có "giờ:phút:giây". Với chuỗi chỉ dùng phút:giây
+        // (và mili-giây nếu có): phần ngày, giờ, múi giờ không ảnh hưởng tới mốc kỳ nên bỏ qua.
+        function pdParseTime(value) {
+            if (value === null || value === undefined || value === '') return null;
+            if (typeof value === 'number' || /^\d{10,13}$/.test(String(value).trim())) {
+                const n = Number(value);
+                if (!Number.isFinite(n)) return null;
+                if (n > 1e11) return { ms: n, res: n % 1000 === 0 ? 1000 : 1 };
+                if (n > 1e9) return { ms: n * 1000, res: 1000 };
+                return null;
+            }
+            const m = String(value).match(/(?:^|\D)(\d{1,2}):(\d{2}):(\d{2})(?:[.,](\d{1,3}))?/);
+            if (!m) return null;
+            const min = Number(m[2]);
+            const sec = Number(m[3]);
+            if (min > 59 || sec > 59) return null;
+            const frac = m[4] ? Number((m[4] + '00').slice(0, 3)) : 0;
+            return { ms: (min * 60 + sec) * 1000 + frac, res: m[4] ? 1 : 1000 };
+        }
+
+        // Mỗi phản hồi API cho một khoảng [lo, hi] chứa độ lệch thật giữa giờ máy chủ và giờ thiết bị
+        // (máy chủ ghi giờ trong lúc từ t0 = gửi đến t1 = nhận, giờ chỉ chính xác tới giây).
+        // Lấy giao của các khoảng → sau vài lần hỏi độ lệch chính xác dần. Chỉ cần phần lẻ trong 30 phút,
+        // nên múi giờ của máy chủ không ảnh hưởng.
+        function pdNoteServerTime(json, t0, t1) {
+            if (pdSyncBad || !json || typeof json !== 'object') return;
+            if (!(t1 >= t0) || t1 - t0 > 4000) return;
+            const pick = function (obj) {
+                if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
+                const keys = ['serviceNowTime', 'serviceTime', 'serverTime'];
+                for (let i = 0; i < keys.length; i++) {
+                    const parsed = pdParseTime(obj[keys[i]]);
+                    if (parsed) return parsed;
+                }
+                return null;
+            };
+            const p = pick(json) || pick(json.data);
+            if (!p) return;
+            const HALF_HOUR = 1800000;
+            let lo = p.ms - t1;
+            let hi = p.ms + p.res - t0;
+            const shift = Math.round(((lo + hi) / 2) / HALF_HOUR) * HALF_HOUR;
+            lo -= shift;
+            hi -= shift;
+            if (pdSyncOk && lo <= pdOffHi && hi >= pdOffLo) {
+                pdOffLo = Math.max(pdOffLo, lo);
+                pdOffHi = Math.min(pdOffHi, hi);
+                pdSyncMiss = 0;
+            } else {
+                // Lệch hẳn so với các lần trước: lấy lại từ đầu. Lệch liên tục → giờ API không tin được.
+                if (pdSyncOk && ++pdSyncMiss >= 3) { pdSyncBad = true; pdSyncOk = false; return; }
+                pdOffLo = lo;
+                pdOffHi = hi;
+            }
+            pdSyncOk = true;
+            pdOffMid = (pdOffLo + pdOffHi) / 2;
+        }
+
+        function pdNoteFetchOk(startedAt) {
+            if (startedAt > pdFetchOkAt) pdFetchOkAt = startedAt;
+        }
+
+        // Kỳ đang chạy theo đồng hồ: into = đã chạy, rem = còn lại, start/end = mốc theo giờ thiết bị.
+        function pdRound(now) {
+            const t = now + (pdSyncOk ? pdOffMid : 0) - pdState.adj;
+            const into = pdMod(t, PD_ROUND_MS);
+            const rem = PD_ROUND_MS - into;
+            return { idx: Math.floor(t / PD_ROUND_MS), into: into, rem: rem, start: now - into, end: now + rem };
+        }
+
+        // Bảng đã có kết quả của kỳ vừa kết thúc chưa?
+        //  • Có, nếu kỳ mới vừa về bảng quanh đầu kỳ này.
+        //  • Có, nếu đã hỏi API thành công sau đầu kỳ PD_SETTLE_MS mà không có gì mới — trừ khi biết chắc
+        //    kết quả kỳ vừa rồi còn "nợ" (kỳ trước bảng đã đủ mà ô mới nhất vẫn chưa đổi): chờ tiếp tới 12 giây.
+        function pdOwed(round, newest) {
+            return !!(pdLastSynced && pdLastSynced.idx === round.idx - 1 && pdLastSynced.newest === newest);
+        }
+        function pdIsSynced(round, newest, owed) {
+            if (!newest) return false;
+            if (pdNewestSeenAt >= round.start - PD_GUARD_MS) return true;
+            return pdFetchOkAt >= round.start + PD_SETTLE_MS && !(owed && round.into <= 12000);
+        }
+
+        function pdPendingFor(end) {
+            for (let i = pdState.pending.length - 1; i >= 0; i--) {
+                if (Math.abs(pdState.pending[i].endAt - end) < PD_ROUND_MS / 2) return i;
+            }
+            return -1;
+        }
+
+        function pdChoose(choice) {
+            const now = Date.now();
+            const round = pdRound(now);
+            const newest = pdNewestIssue();
+            if (pdIsSynced(round, newest, pdOwed(round, newest)) && Math.floor(round.rem / 1000) > PD_LOCK_SEC) {
+                const i = pdPendingFor(round.end);
+                if (i >= 0 && pdState.pending[i].c === choice) {
+                    pdState.pending.splice(i, 1);           // bấm lại nút đang chọn → bỏ chọn
+                } else if (i >= 0) {
+                    pdState.pending[i].c = choice;
+                    pdState.pending[i].at = now;
+                } else {
+                    pdState.pending.push({ c: choice, base: newest, issue: pdNextIssue(newest), endAt: round.end, at: now });
+                    if (pdState.pending.length > 5) pdState.pending = pdState.pending.slice(-5);
+                }
+                pdNoticeUntil = 0;
+                pdSave();
+            }
+            pdRender();
+        }
+
+        // Chấm các dự đoán đang chờ. Kết quả của kỳ đã chọn = ô nằm NGAY SAU ô "base" trên bảng
+        // (base = kỳ mới nhất trên bảng lúc bấm chọn).
+        function pdResolve(now) {
+            if (!pdState.pending.length) return;
+            const newest = pdNewestIssue();
+            if (!newest) return;
+            const keep = [];
+            let changed = false;
+            for (let k = 0; k < pdState.pending.length; k++) {
+                const p = pdState.pending[k];
+                let baseIdx = -1;
+                for (let i = TOTAL - 1; i >= 0; i--) {
+                    if (cells[i].sttFull === p.base) { baseIdx = i; break; }
+                }
+                if (baseIdx < 0) {
+                    // Ô gốc đã trôi khỏi bảng (để máy quá lâu) → không chấm chính xác được nữa.
+                    if (issueGreater(newest, p.base) || now - p.endAt > 6 * 3600000) {
+                        changed = true;
+                        pdSetNotice('Đã bỏ 1 dự đoán cũ vì không xác định được kết quả.');
+                    } else {
+                        keep.push(p);
+                    }
+                    continue;
+                }
+                const newer = (TOTAL - 1) - baseIdx;
+                if (newer <= 0) { keep.push(p); continue; }
+                if (now < p.endAt - PD_GUARD_MS) {
+                    // Kỳ đã chọn còn đang chạy mà đã có kết quả mới → đó là kết quả kỳ TRƯỚC về trễ: dời mốc.
+                    p.base = newest;
+                    p.issue = pdNextIssue(newest);
+                    keep.push(p);
+                    changed = true;
+                    continue;
+                }
+                const cell = cells[baseIdx + 1];
+                const kind = pdKind(cell.value);
+                const ended = Math.floor((now - p.endAt + PD_GUARD_MS) / PD_ROUND_MS) + 1;
+                if (!kind || newer > ended) {
+                    // Số kỳ mới về nhiều hơn số kỳ đã trôi qua → lúc chọn bảng chưa cập nhật, không chấm.
+                    changed = true;
+                    pdSetNotice('Đã bỏ 1 dự đoán vì bảng chưa cập nhật lúc chọn.');
+                    continue;
+                }
+                const ok = kind === p.c;
+                pdState.history.push({ issue: String(cell.sttFull || p.issue), c: p.c, d: String(cell.value), ok: ok, at: now });
+                if (ok) { pdState.win++; pdState.streak = pdState.streak > 0 ? pdState.streak + 1 : 1; }
+                else { pdState.lose++; pdState.streak = pdState.streak < 0 ? pdState.streak - 1 : -1; }
+                changed = true;
+            }
+            if (changed) {
+                pdState.pending = keep;
+                if (pdState.history.length > PD_HISTORY_MAX) pdState.history = pdState.history.slice(-PD_HISTORY_MAX);
+                pdHistoryDirty = true;
+                pdSave();
+            }
+        }
+
+        // Gọi mỗi khi bảng thay đổi (renderAll).
+        function pdOnBoardChanged() {
+            if (!pdReady) return;
+            const now = Date.now();
+            const newest = pdNewestIssue();
+            if (newest !== pdSeenNewest) {
+                const prev = pdSeenNewest;
+                pdSeenNewest = newest;
+                // Chỉ tính là "kỳ mới vừa về" khi bảng thêm đúng 1 ô sau ô mới nhất trước đó.
+                const before = cells[TOTAL - 2];
+                pdNewestSeenAt = (prev && before && String(before.sttFull || '') === prev) ? now : 0;
+            }
+            pdResolve(now);
+            pdRender();
+        }
+
+        function pdRenderHistory() {
+            const box = pdEl.History;
+            box.textContent = '';
+            const list = pdState.history.slice(-PD_CHIPS);
+            if (!list.length) {
+                const empty = document.createElement('span');
+                empty.className = 'pd-history-empty';
+                empty.textContent = 'Chưa có dự đoán nào được chấm.';
+                box.appendChild(empty);
+                return;
+            }
+            const fragment = document.createDocumentFragment();
+            for (let i = 0; i < list.length; i++) {
+                const h = list[i];
+                const chip = document.createElement('span');
+                chip.className = 'pd-chip ' + (h.ok ? 'ok' : 'no');
+                chip.textContent = h.ok ? '✓' : '✗';
+                chip.title = 'Kỳ ' + pdShort(h.issue) + ' · chọn ' + pdKindName(h.c) + ' · ra ' + h.d
+                    + ' (' + pdKindName(pdKind(h.d)) + ') · ' + (h.ok ? 'ĐÚNG' : 'SAI');
+                chip.setAttribute('role', 'listitem');
+                chip.setAttribute('aria-label', chip.title);
+                fragment.appendChild(chip);
+            }
+            box.appendChild(fragment);
+        }
+
+        function pdCanPoll() {
+            return !document.hidden && !fetchInProgress && !!getToken() && (tokenAlive() || !!getRefreshToken());
+        }
+
+        // Chạy 10 lần/giây: vẽ lại khung; đầu kỳ mới mà kết quả kỳ vừa rồi chưa về thì hỏi API dồn dập hơn
+        // (bình thường 5 giây mới hỏi 1 lần) để hiện ĐÚNG / SAI sớm.
+        function pdTick() {
+            if (!pdReady) return;
+            const now = Date.now();
+            const round = pdRound(now);
+            const newest = pdNewestIssue();
+            if (newest && !pdIsSynced(round, newest, pdOwed(round, newest)) && round.into >= 800 && round.into <= 12000
+                    && now - pdLastBurstAt >= 1200 && pdCanPoll()) {
+                pdLastBurstAt = now;
+                refreshResults(false, false);
+            }
+            pdRender();
+        }
+
+        function pdRender() {
+            if (!pdReady) return;
+            const now = Date.now();
+            const round = pdRound(now);
+            const newest = pdNewestIssue();
+            const prevSynced = pdOwed(round, newest);
+            const synced = pdIsSynced(round, newest, prevSynced);
+            if (synced) pdLastSynced = { idx: round.idx, newest: newest };
+
+            const sec = Math.max(0, Math.min(PD_ROUND_SEC - 1, Math.floor(round.rem / 1000)));
+            const locked = sec <= PD_LOCK_SEC;
+            const canPick = synced && !locked;
+            const curIdx = pdPendingFor(round.end);
+            const cur = curIdx >= 0 ? pdState.pending[curIdx] : null;
+            const pick = cur ? cur.c : '';
+
+            let curIssue = '';
+            if (synced) curIssue = pdNextIssue(newest);
+            else if (prevSynced) curIssue = pdNextIssue(pdNextIssue(newest));
+            const curShort = curIssue ? pdShort(curIssue) : '---';
+
+            // --- Đồng hồ ---
+            pdAttr(pdEl.Panel, 'data-phase', !newest ? 'off' : (locked ? 'lock' : (synced ? 'open' : 'wait')));
+            pdText(pdEl.Issue, curShort);
+            pdAttr(pdEl.Issue, 'title', curIssue ? 'ID ' + curIssue : '');
+            pdText(pdEl.Time, pdPad2(Math.floor(sec / 60)) + ':' + pdPad2(sec % 60));
+            pdText(pdEl.ClockLabel, locked ? 'Đã khoá' : 'Còn lại');
+            pdEl.Bar.style.transform = 'scaleX(' + (round.rem / PD_ROUND_MS).toFixed(3) + ')';
+
+            // --- Nút chọn ---
+            pdAttr(pdEl.BtnBig, 'aria-disabled', canPick ? 'false' : 'true');
+            pdAttr(pdEl.BtnSmall, 'aria-disabled', canPick ? 'false' : 'true');
+            pdAttr(pdEl.BtnBig, 'aria-pressed', pick === 'B' ? 'true' : 'false');
+            pdAttr(pdEl.BtnSmall, 'aria-pressed', pick === 'S' ? 'true' : 'false');
+            pdEl.Buttons.classList.toggle('has-pick', !!pick);
+
+            let status;
+            if (!newest) status = 'Chưa có dữ liệu kết quả.';
+            else if (pdNotice && now < pdNoticeUntil) status = pdNotice;
+            else if (cur) {
+                status = locked
+                    ? 'Đã khoá · bạn chọn ' + pdKindName(pick) + ' cho kỳ ' + pdShort(cur.issue)
+                    : 'Bạn chọn ' + pdKindName(pick) + ' cho kỳ ' + pdShort(cur.issue) + ' · bấm lại để bỏ chọn';
+            } else if (!synced) {
+                if (round.into > 12000) status = 'Chưa nhận được kết quả mới — tạm khoá dự đoán.';
+                else if (prevSynced) status = 'Đang chờ kết quả kỳ ' + pdShort(pdNextIssue(newest)) + '…';
+                else status = 'Đang cập nhật kết quả…';
+            } else if (locked) status = 'Đã khoá kỳ ' + curShort + ' · chờ kỳ sau.';
+            else status = 'Chọn LỚN hoặc NHỎ cho kỳ ' + curShort;
+            pdText(pdEl.Status, status);
+
+            // --- Kết quả gần nhất: ĐÚNG / SAI ---
+            let awaiting = null;
+            for (let i = 0; i < pdState.pending.length; i++) {
+                const p = pdState.pending[i];
+                if (p !== cur && p.endAt <= now + 500) { awaiting = p; break; }
+            }
+            let banner;
+            if (awaiting) {
+                banner = {
+                    state: 'wait', key: 'wait|' + awaiting.issue + '|' + awaiting.c, ball: '?', kind: '',
+                    main: 'Kỳ ' + pdShort(awaiting.issue) + ' · bạn chọn ' + pdKindName(awaiting.c),
+                    sub: 'Đang chờ kết quả…', verdict: 'CHỜ'
+                };
+            } else if (newest) {
+                const cell = cells[TOTAL - 1];
+                const kind = pdKind(cell.value);
+                let rec = null;
+                for (let i = pdState.history.length - 1; i >= 0 && i >= pdState.history.length - 5; i--) {
+                    if (pdState.history[i].issue === newest) { rec = pdState.history[i]; break; }
+                }
+                banner = {
+                    state: rec ? (rec.ok ? 'win' : 'lose') : 'none',
+                    key: (rec ? (rec.ok ? 'win|' : 'lose|') : 'none|') + newest,
+                    ball: String(cell.value), kind: kind,
+                    main: 'Kỳ ' + pdShort(newest) + ' ra ' + cell.value + ' · ' + pdKindName(kind),
+                    sub: rec ? 'Bạn chọn ' + pdKindName(rec.c) : 'Bạn không dự đoán kỳ này',
+                    verdict: rec ? (rec.ok ? '✓ ĐÚNG' : '✗ SAI') : ''
+                };
+            } else {
+                banner = { state: 'idle', key: 'idle', ball: '?', kind: '', main: 'Chưa có kết quả', sub: '', verdict: '' };
+            }
+            if (banner.key !== pdBannerKey) {
+                const first = pdBannerKey === '';
+                pdBannerKey = banner.key;
+                pdAttr(pdEl.Result, 'data-state', banner.state);
+                pdAttr(pdEl.Ball, 'data-kind', banner.kind);
+                pdText(pdEl.Ball, banner.ball);
+                pdText(pdEl.ResultMain, banner.main);
+                pdText(pdEl.ResultSub, banner.sub);
+                pdText(pdEl.Verdict, banner.verdict);
+                pdEl.Result.classList.remove('pd-flash');
+                if (!first && (banner.state === 'win' || banner.state === 'lose')) {
+                    void pdEl.Result.offsetWidth;
+                    pdEl.Result.classList.add('pd-flash');
+                }
+            }
+
+            // --- Thống kê ---
+            const total = pdState.win + pdState.lose;
+            const streak = pdState.streak;
+            pdText(pdEl.Win, String(pdState.win));
+            pdText(pdEl.Lose, String(pdState.lose));
+            pdText(pdEl.Rate, total ? Math.round(pdState.win * 100 / total) + '%' : '–');
+            pdText(pdEl.Streak, streak > 0 ? streak + ' ✓' : (streak < 0 ? (-streak) + ' ✗' : '–'));
+            pdAttr(pdEl.Streak, 'data-kind', streak > 0 ? 'ok' : (streak < 0 ? 'no' : ''));
+            if (pdHistoryDirty) { pdHistoryDirty = false; pdRenderHistory(); }
+
+            // --- Chân khung: giờ hiện tại + chỉnh đồng hồ ---
+            const clock = new Date(now + (pdSyncOk ? pdOffMid : 0));
+            const adj = pdState.adj;
+            pdText(pdEl.Sync, (pdSyncOk ? 'Giờ máy chủ ' : 'Giờ thiết bị ')
+                + pdPad2(clock.getHours()) + ':' + pdPad2(clock.getMinutes()) + ':' + pdPad2(clock.getSeconds())
+                + (adj ? ' · chỉnh ' + (adj > 0 ? '+' : '−') + Math.abs(adj / 1000) + 's' : ''));
+            const armed = now < pdResetArmedUntil;
+            pdText(pdEl.Reset, armed ? 'Bấm lần nữa để xoá' : 'Xoá thống kê');
+            pdEl.Reset.classList.toggle('armed', armed);
+        }
+
+        // +1s: đồng hồ khung này hiện thêm 1 giây (khi game còn nhiều giây hơn) · −1s: ngược lại.
+        function pdAdjust(deltaMs) {
+            let adj = pdState.adj + deltaMs;
+            const half = PD_ROUND_MS / 2;
+            if (adj > half) adj -= PD_ROUND_MS;
+            else if (adj <= -half) adj += PD_ROUND_MS;
+            pdState.adj = adj;
+            pdSave();
+            pdRender();
+        }
+
+        function pdInit() {
+            pdLoad();
+            pdSeenNewest = pdNewestIssue();
+            pdNewestSeenAt = 0;
+            pdReady = true;
+            pdEl.BtnBig.addEventListener('click', function () { pdChoose('B'); });
+            pdEl.BtnSmall.addEventListener('click', function () { pdChoose('S'); });
+            pdEl.AdjMinus.addEventListener('click', function () { pdAdjust(-1000); });
+            pdEl.AdjPlus.addEventListener('click', function () { pdAdjust(1000); });
+            pdEl.Reset.addEventListener('click', function () {
+                const now = Date.now();
+                if (now < pdResetArmedUntil) {
+                    pdState.history = [];
+                    pdState.win = 0;
+                    pdState.lose = 0;
+                    pdState.streak = 0;
+                    pdResetArmedUntil = 0;
+                    pdHistoryDirty = true;
+                    pdSave();
+                } else {
+                    pdResetArmedUntil = now + 3000;     // phải bấm lần 2 trong 3 giây mới xoá
+                }
+                pdRender();
+            });
+            // Quay lại tab: cập nhật kết quả ngay, không chờ tới lượt hỏi 5 giây.
+            document.addEventListener('visibilitychange', function () {
+                if (pdCanPoll()) refreshResults(false, false);
+                pdRender();
+            });
+            // Mở cùng lúc nhiều tab: tab kia chọn / chấm thì tab này cập nhật theo.
+            window.addEventListener('storage', function (event) {
+                if (event.key !== LS_PREDICT) return;
+                pdLoad();
+                pdHistoryDirty = true;
+                pdRender();
+            });
+            pdResolve(Date.now());
+            pdRender();
+            setInterval(pdTick, 100);
+        }
+
+        /* ================= 📋 TRA ĐOẠN SỐ TRONG KHO (ghép từ diemdanh.html) =================
+           • Dùng CHUNG kho với trang cũ: localStorage "vn168_game_archive_v1" + Firebase "vn168_archive".
+           • Trang này CHỈ ĐỌC kho trên Firebase (không ghi, không xoá) — kho vẫn do trang cũ tải và lưu.
+           • Đoạn = (số ô nhập) + 5 số phía sau, cắt trên các kỳ đứng liền nhau trong kho.
+        ================================================================================== */
+        const LS_GAME_ARCHIVE = 'vn168_game_archive_v1';
+        const LS_SEG_SYNC = 'vn168_seg_sync_v1';
+        const LS_SEG_SORT = 'vn168_segSort';
+        const LS_SEG_LEN = 'vn168_segLen';
+        const GAME_ARCHIVE_MAX = 92120;
+        const FB_ARCHIVE_COL = 'vn168_archive';
+        const FB_CHUNK_SIZE = 5000;
+        const SEG_TAIL = 5;                    // hiện 5 số phía sau phần nhập
+        const SEG_SYNC_MIN_GAP = 5 * 60000;    // đối chiếu lại với Firebase tối đa 5 phút/lần
+        const SEG_SCROLL_DELAY = 350;
+        const SEG_ROW_LIMIT = 500;
+
+        let gameArchive = [];                  // [{ i: ID kỳ, n: số, d: chữ số, t: ts }] mới → cũ
+        let gameArchiveKeys = new Set();
+        let archiveSaveFailed = '';
+        let dataTableMode = 'latest';          // 'latest' | 'segments'
+        let dataTableSeg = null;               // { prefix: [...], len }
+        let segSortMode = 'issue';             // 'issue' | 'value' | 'sum'
+        let segRemote = null;                  // doc "progress" trên Firebase: { count, chunks, newest, oldest }
+        let segSyncing = null;                 // promise đang đọc kho từ Firebase
+        let segSyncAt = 0;
+        let segSyncNote = '';                  // ghi chú lần đọc Firebase gần nhất (thiếu khối…)
+        let segStoreLoaded = false;
+        let segTakeBusy = false;
+        let segStorageTimer = null;
+        let segResizeTimer = null;
+
+        function segEl(id) { return document.getElementById(id); }
+        function segEsc(v) {
+            return String(v === null || v === undefined ? '' : v).replace(/[&<>"']/g, function (ch) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+            });
+        }
+        function segSetInfo(msg, color) {
+            const info = segEl('segInfo');
+            if (!info) return;
+            info.style.color = color || '#94a3b8';
+            info.textContent = msg;
+        }
+        function fmtTime(ts) {
+            const n = Number(ts);
+            if (!Number.isFinite(n) || n <= 0) return '';
+            const d = new Date(n);
+            const z = function (x) { return x < 10 ? '0' + x : String(x); };
+            return z(d.getMonth() + 1) + '/' + z(d.getDate()) + ' ' + z(d.getHours()) + ':' + z(d.getMinutes());
+        }
+
+        // so sánh ID kỳ: >0 = a mới hơn b (ID 17 số vượt JS number → so bằng chuỗi)
+        function compareIssue(a, b) {
+            a = String(a); b = String(b);
+            if (a === b) return 0;
+            const an = /^\d+$/.test(a), bn = /^\d+$/.test(b);
+            if (an && bn) {
+                if (a.length !== b.length) return a.length > b.length ? 1 : -1;
+                return a > b ? 1 : -1;
+            }
+            return a > b ? 1 : -1;
+        }
+        // mỗi kỳ lưu dạng "ID:số:ts"
+        function decEntry(str) {
+            const s = String(str);
+            const p1 = s.indexOf(':');
+            if (p1 <= 0) return null;
+            const p2 = s.indexOf(':', p1 + 1);
+            const d = p2 < 0 ? s.slice(p1 + 1) : s.slice(p1 + 1, p2);
+            if (!d) return null;
+            return { i: s.slice(0, p1), n: d, d: d, t: p2 < 0 ? 0 : (Number(s.slice(p2 + 1)) || 0) };
+        }
+        function segIsDigit(v) { return /^[0-9]$/.test(String(v)); }
+        function segParseArchive(raw) {
+            let arr = null;
+            if (raw && raw.charAt(0) === '[') {                       // định dạng CŨ (JSON)
+                try { arr = JSON.parse(raw); } catch (e) {}
+            } else if (raw && raw.indexOf('v2|') === 0) {             // định dạng NÉN "v2|ID:số:ts|…"
+                arr = [];
+                const parts = raw.slice(3).split('|');
+                for (let k = 0; k < parts.length; k++) { const e = decEntry(parts[k]); if (e) arr.push(e); }
+            }
+            if (!Array.isArray(arr)) return [];
+            return arr.filter(function (e) { return e && e.i && e.d !== undefined && segIsDigit(e.d); });
+        }
+        function segReadLocalRaw() {
+            try { return localStorage.getItem(LS_GAME_ARCHIVE); } catch (e) { return null; }
+        }
+        function loadGameArchive() {
+            gameArchive = segParseArchive(segReadLocalRaw()).slice(0, GAME_ARCHIVE_MAX);
+            gameArchiveKeys = new Set(gameArchive.map(function (e) { return e.i; }));
+        }
+        // gộp thêm các kỳ chưa có (giữ kho luôn sắp MỚI → CŨ); trả về số kỳ thêm được
+        function segMergeEntries(list) {
+            let added = 0;
+            for (let k = 0; k < list.length; k++) {
+                const e = list[k];
+                if (!e || !e.i || !segIsDigit(e.d) || gameArchiveKeys.has(e.i)) continue;
+                gameArchiveKeys.add(e.i);
+                gameArchive.push(e);
+                added++;
+            }
+            if (added) {
+                gameArchive.sort(function (a, b) { return compareIssue(b.i, a.i); });
+                if (gameArchive.length > GAME_ARCHIVE_MAX) {
+                    const removed = gameArchive.splice(GAME_ARCHIVE_MAX);
+                    for (let k = 0; k < removed.length; k++) gameArchiveKeys.delete(removed[k].i);
+                }
+            }
+            return added;
+        }
+        // lưu kho vào máy (cùng định dạng với trang cũ). Trước khi ghi luôn gộp lại bản đang nằm trong máy
+        // để không bao giờ làm mất kỳ mà tab khác (trang cũ) vừa lưu thêm.
+        function saveGameArchive() {
+            try { segMergeEntries(segParseArchive(segReadLocalRaw())); } catch (e) {}
+            const parts = new Array(gameArchive.length);
+            for (let k = 0; k < gameArchive.length; k++) {
+                const e = gameArchive[k];
+                parts[k] = e.i + ':' + e.d + ':' + (Number(e.t) || 0);
+            }
+            const out = 'v2|' + parts.join('|') + (parts.length ? '|' : '');
+            try {
+                localStorage.setItem(LS_GAME_ARCHIVE, out);
+                archiveSaveFailed = '';
+                return true;
+            } catch (err) {
+                archiveSaveFailed = 'không lưu được kho vào máy (' + (err && err.name ? err.name : 'lỗi ghi') + ')';
+                return false;
+            }
+        }
+
+        /* ===== ☁️ ĐỌC KHO TỪ FIREBASE (chỉ đọc) =====
+           collection "vn168_archive": doc "progress" (số kỳ, số khối, kỳ mới nhất / cũ nhất)
+           + các khối "chunk_000…" mỗi khối 5000 kỳ, mới → cũ. Chỉ đọc đúng số khối ghi trong "progress". */
+        function segFbGet(id) {
+            return fbDB.collection(FB_ARCHIVE_COL).doc(id).get().then(function (doc) {
+                return doc && doc.exists ? (doc.data() || {}) : null;
+            });
+        }
+        function segChunkEntries(c) {
+            const out = [];
+            if (!c || typeof c.items !== 'string') return out;
+            const parts = c.items.split('|');
+            for (let k = 0; k < parts.length; k++) { const e = decEntry(parts[k]); if (e) out.push(e); }
+            return out;
+        }
+        function segSig(p) {
+            return p ? [Number(p.count) || 0, String(p.newest || ''), String(p.oldest || '')].join('|') : '';
+        }
+        function segReadMark() {
+            try { const o = JSON.parse(localStorage.getItem(LS_SEG_SYNC) || 'null'); return (o && typeof o === 'object') ? o : {}; } catch (e) { return {}; }
+        }
+        function segWriteMark(o) { try { localStorage.setItem(LS_SEG_SYNC, JSON.stringify(o)); } catch (e) {} }
+        function segPause() { return new Promise(function (r) { setTimeout(r, 0); }); }
+        function segRenderSafe() { try { renderDataTable(dataTableMode); } catch (e) {} }
+
+        function segStoreSync(showInfo) {
+            if (!fbDB) return Promise.resolve(gameArchive.length > 0);
+            if (segSyncing) return segSyncing;
+            const say = function (m) { if (showInfo) { try { showInfo(m); } catch (e) {} } };
+            segSyncing = (async function () {
+                let prog = null;
+                try { prog = await segFbGet('progress'); } catch (e) { prog = null; }
+                segSyncAt = Date.now();
+                if (!prog) return gameArchive.length > 0;          // Firebase chưa có kho / bị chặn quyền đọc / mất mạng
+                segRemote = prog;
+                const sig = segSig(prog);
+                const mark = segReadMark();
+                if (gameArchive.length && mark.sig === sig && gameArchive.length >= (Number(mark.len) || 0)) {
+                    segSyncNote = '';
+                    return true;                                    // kho trong máy đã khớp bản trên Firebase
+                }
+                const want = Number(prog.count) || 0;
+                const n = Math.max(1, Math.min(60, Math.round(Number(prog.chunks)) || Math.ceil(want / FB_CHUNK_SIZE) || 1));
+                const localNewest = gameArchive.length ? gameArchive[0].i : '';
+                say('☁️ Đang tải kho từ Firebase về máy…');
+                segRenderSafe();
+                let added = 0, missing = 0;
+                const readChunk = function (ci) {
+                    return segFbGet('chunk_' + String(ci).padStart(3, '0')).then(function (c) {
+                        if (!c || typeof c.items !== 'string') { missing++; return null; }
+                        return c;
+                    }, function () { missing++; return null; });
+                };
+                // khối 0 = 5000 kỳ MỚI NHẤT: máy đã có kho thì thường chỉ cần khối này
+                const c0 = await readChunk(0);
+                added += segMergeEntries(segChunkEntries(c0));
+                const overlap = !!(localNewest && c0 && c0.tail && compareIssue(String(c0.tail), localNewest) <= 0);
+                if (n > 1 && !(overlap && gameArchive.length >= want)) {
+                    const BATCH = 7;
+                    let list = [];
+                    for (let from = 1; from < n; from += BATCH) {
+                        const jobs = [];
+                        for (let ci = from; ci < Math.min(n, from + BATCH); ci++) jobs.push(readChunk(ci));
+                        const got = await Promise.all(jobs);
+                        for (let g = 0; g < got.length; g++) list = list.concat(segChunkEntries(got[g]));
+                        say('☁️ Đang tải kho từ Firebase về máy… ' + Math.min(n, from + BATCH) + '/' + n + ' khối');
+                    }
+                    await segPause();
+                    added += segMergeEntries(list);
+                }
+                if (missing) {
+                    // thiếu khối → KHÔNG lưu bản dở vào máy (tránh tạo lỗ hổng trong kho), lần sau đọc lại
+                    segSyncNote = 'thiếu ' + missing + '/' + n + ' khối';
+                    segSyncAt = 0;
+                    return gameArchive.length > 0;
+                }
+                segSyncNote = '';
+                await segPause();
+                if (added) saveGameArchive();
+                segWriteMark({ sig: sig, len: gameArchive.length, at: Date.now() });
+                return gameArchive.length > 0;
+            })().then(function (ok) { return ok; }, function () { return gameArchive.length > 0; })
+                .then(function (ok) { segSyncing = null; segRenderSafe(); return ok; });
+            return segSyncing;
+        }
+        function segBoot() {
+            if (segStoreLoaded) return;
+            segStoreLoaded = true;
+            try { loadGameArchive(); } catch (e) {}
+            segRenderSafe();
+        }
+
+        // kho đang sắp MỚI → CŨ → đảo thành CŨ → MỚI để cắt đoạn số liên tiếp
+        function archiveChrono() {
+            const out = [];
+            for (let i = gameArchive.length - 1; i >= 0; i--) {
+                const e = gameArchive[i];
+                if (!e || !segIsDigit(e.d)) continue;
+                out.push(e);
+            }
+            return out;
+        }
+        /* ===== SỐ Ô NHẬP: 2..6 (mỗi ô 1 chữ số 0-9), đoạn = (số ô) + 5 số phía sau ===== */
+        function segPrefixLen() {
+            const el = segEl('segLen');
+            let n = parseInt(el && el.value, 10);
+            if (!(n >= 2 && n <= 6)) n = 4;   // mặc định 4 ô
+            return n;
+        }
+        function segTotalLen() { return segPrefixLen() + SEG_TAIL; }
+        function segInputIds() {
+            const a = [];
+            for (let i = 1; i <= segPrefixLen(); i++) a.push('segD' + i);
+            return a;
+        }
+        function segPrefixDigits() {
+            return segInputIds().map(function (id) {
+                const e = segEl(id);
+                return e ? String(e.value || '').replace(/\D/g, '') : '';
+            });
+        }
+        function renderSegInputs(keepValues) {
+            const box = segEl('segInputs');
+            if (!box) return;
+            const old = {};
+            if (keepValues) segInputIds().forEach(function (id) {
+                const e = segEl(id); if (e) old[id] = String(e.value || '').replace(/\D/g, '').slice(0, 1);
+            });
+            const n = segPrefixLen();
+            let html = '';
+            for (let i = 1; i <= n; i++) {
+                html += '<input id="segD' + i + '" class="seg-in" maxlength="1" inputmode="numeric" autocomplete="off" placeholder="0-9"'
+                    + ' aria-label="Số thứ ' + i + '" value="' + (old['segD' + i] || '') + '">';
+            }
+            box.innerHTML = html;
+            const info = segEl('segLenInfo');
+            if (info) info.textContent = '→ đoạn ' + segTotalLen() + ' số (' + n + ' số đầu nhập + ' + SEG_TAIL + ' số cuối tra)';
+            const hdr = segEl('segTitle');
+            if (hdr) hdr.textContent = '📋 Tra đoạn ' + segTotalLen() + ' số trong kho';
+            // 4 ô copy: dựng 1 lần cho có ô trống, đổi số ô nhập thì KHÔNG xoá nội dung đang có
+            const mir = segEl('segMirror');
+            if (mir && !mir.innerHTML) renderSegMirror([]);
+        }
+        /* ===== 🧾 HÀNG CUỐI BẢNG 10 Ô (trái → phải = CŨ → MỚI) =====
+           Nút "🧾 Lấy số": lấy các ô CUỐI của hàng 10, đọc từ TRÁI sang PHẢI (bảng sống → kho). */
+        function segLastRowDigits(need) {
+            let board = [];
+            try {
+                if (boardCount > 0 && cells.length) {
+                    const startIdx = Math.max(0, (ROWS - 1) * COLS);
+                    for (let c = 0; c < COLS; c++) {
+                        const cell = cells[startIdx + c];
+                        const v = cell && cell.value !== null && cell.value !== undefined ? String(cell.value) : '';
+                        if (segIsDigit(v)) board.push(v);
+                    }
+                }
+            } catch (e) { board = []; }
+            if (board.length >= need) return { digits: board, src: 'board' };
+            // bảng chưa đủ số → 10 kỳ mới nhất trong kho, đảo thành trái→phải = cũ→mới
+            const take = [];
+            try {
+                for (let k = 0; k < gameArchive.length && take.length < COLS; k++) {
+                    if (segIsDigit(gameArchive[k].d)) take.push(String(gameArchive[k].d));
+                }
+            } catch (e) {}
+            take.reverse();
+            if (take.length >= need || take.length > board.length) return { digits: take, src: take.length ? 'archive' : 'none' };
+            return { digits: board, src: board.length ? 'board' : 'none' };
+        }
+        // Lấy N số cuối cùng của HÀNG 10 Ô (đọc trái→phải) điền vào các ô nhập → hiện kết quả luôn
+        function segTakeLast() {
+            segBoot();
+            const n = segPrefixLen();
+            const row = segLastRowDigits(n);
+            const arr = row.digits;
+            if (arr.length >= n) {
+                // n Ô CUỐI (bên phải = số MỚI NHẤT), giữ đúng thứ tự TRÁI → PHẢI (cũ → mới)
+                const last = arr.slice(-n);
+                const ids = segInputIds();
+                for (let i = 0; i < n; i++) {
+                    const e = segEl(ids[i]);
+                    if (e) e.value = String(last[i]);
+                }
+                segSetInfo('🧾 ' + n + ' ô cuối của hàng 10 (' + (row.src === 'board' ? 'bảng sống' : 'kho') + '): '
+                    + last.join(' ') + ' — trái→phải = cũ→mới');
+                findSegmentsFromInput();
+                return true;
+            }
+            // bảng chưa có số và kho trong máy trống → đọc kho trên Firebase rồi lấy lại
+            if (fbDB && !gameArchive.length && !segTakeBusy) {
+                segTakeBusy = true;
+                segSetInfo('☁️ Đang tải kho từ Firebase về máy…');
+                segStoreSync(function (m) { segSetInfo(m); }).then(function (ok) {
+                    segTakeBusy = false;
+                    if (ok && gameArchive.length >= n) { segTakeLast(); return; }
+                    dataTableSeg = null; renderDataTable('latest');
+                    segSetInfo('⚠️ Bảng chưa có đủ ' + n + ' số ở hàng cuối và chưa tải được kho từ Firebase.', '#f87171');
+                });
+                return false;
+            }
+            dataTableSeg = null;
+            renderDataTable('latest');
+            segSetInfo('⚠️ Hàng cuối của bảng chưa có đủ ' + n + ' số để lấy — chờ bảng nạp kết quả rồi bấm lại.', '#f87171');
+            return false;
+        }
+        /* ▼▼ DROPDOWN TỰ VẼ — thay cho <select> gốc (select gốc bị trình duyệt chặn popup
+            khi mở trong khung xem/iframe, bấm không hiện danh sách) ▼▼ */
+        function ddCloseAll(exceptId) {
+            const lists = document.querySelectorAll('.dd-list');
+            for (let i = 0; i < lists.length; i++) {
+                if (!exceptId || lists[i].id !== exceptId) lists[i].style.display = 'none';
+            }
+        }
+        function ddSync(selId) {
+            const sel = segEl(selId);
+            if (!sel) return;
+            const btn = segEl(selId + 'Btn');
+            const list = segEl(selId + 'List');
+            const opt = sel.options ? sel.options[sel.selectedIndex] : null;
+            if (btn) btn.textContent = ((opt ? opt.textContent : String(sel.value)) + ' ▾');
+            if (list) {
+                const items = list.querySelectorAll('.dd-item');
+                for (let i = 0; i < items.length; i++) {
+                    items[i].classList.toggle('on', items[i].getAttribute('data-val') === String(sel.value));
+                }
+            }
+        }
+        function ddInit(selId) {
+            const sel = segEl(selId);
+            const btn = segEl(selId + 'Btn');
+            const list = segEl(selId + 'List');
+            if (!sel || !btn || !list) return;
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                const open = list.style.display !== 'none';
+                ddCloseAll(open ? null : list.id);
+                list.style.display = open ? 'none' : 'block';
+                ddSync(selId);
+            });
+            list.addEventListener('click', function (e) {
+                const t = e.target;
+                const it = (t && t.closest) ? t.closest('.dd-item') : null;
+                if (!it) return;
+                sel.value = it.getAttribute('data-val');
+                try { sel.dispatchEvent(new Event('change')); } catch (err) {}
+                list.style.display = 'none';
+                ddSync(selId);
+            });
+            ddSync(selId);
+        }
+        function onSegLenChange() {
+            try {
+                try { localStorage.setItem(LS_SEG_LEN, String(segPrefixLen())); } catch (e) {}
+                renderSegInputs(false);
+                dataTableSeg = null;
+                // chọn xong số ô → tự lấy các số cuối cùng trên bảng → hiện kết quả, khỏi nhập tay
+                // (KHÔNG tự focus: bàn phím chỉ bật khi nào bấm vào ô nhập)
+                segTakeLast();
+                ddSync('segLen');
+            } catch (e) {}
+        }
+        // Tìm mọi đoạn (n+5) số liền nhau có n số đầu đúng như nhập (mới nhất trước)
+        function findSegments(prefix) {
+            if (typeof prefix === 'string') prefix = [prefix];
+            const n = prefix.length;
+            const total = n + SEG_TAIL;
+            const arr = archiveChrono();
+            const out = [];
+            for (let i = 0; i + total - 1 < arr.length; i++) {
+                let ok = true;
+                for (let k = 0; k < n; k++) {
+                    if (String(arr[i + k].d) !== String(prefix[k])) { ok = false; break; }
+                }
+                if (ok) {
+                    const digits = [];
+                    for (let k = 0; k < total; k++) digits.push(String(arr[i + k].d));
+                    out.push({ start: arr[i], digits: digits, end: arr[i + total - 1] });
+                }
+            }
+            out.reverse();   // đoạn mới nhất lên đầu
+            return out;
+        }
+        // 🔢 SẮP XẾP KẾT QUẢ TRA ĐOẠN
+        //  'issue' (MẶC ĐỊNH) : KỲ LỚN NHẤT trên cùng, giảm dần xuống dưới (theo ID kỳ xổ)
+        //  'value'            : SỐ LỚN NHẤT (ghép 5 số phía sau) trên cùng, số nhỏ nhất dưới
+        //  'sum'              : TỔNG 5 số phía sau lớn nhất trên cùng
+        //  Trùng nhau → xếp tiếp theo ID kỳ xổ (kỳ lớn nhất trước).
+        function segTailDigits(s, n) {
+            const raw = (s && s.digits != null) ? s.digits : [];
+            const d = Array.isArray(raw) ? raw : String(raw).split('');
+            const cut = Math.max(0, Number(n) || 0);
+            return d.slice(cut).map(function (x) { return String(x); }).filter(function (x) { return /^\d$/.test(x); });
+        }
+        function segIssueId(s) {
+            return String((s && s.start && s.start.i) || (s && s.i) || '');
+        }
+        function segIssueCmp(a, b) {   // >0 nếu kỳ a MỚI hơn kỳ b
+            const ia = segIssueId(a), ib = segIssueId(b);
+            if (ia.length !== ib.length) return ib.length - ia.length;
+            if (ia === ib) return 0;
+            return ia > ib ? 1 : -1;
+        }
+        function segTailValue(s, n) {
+            const t = segTailDigits(s, n);
+            if (!t.length) return -1;
+            const v = parseInt(t.join(''), 10);
+            return Number.isFinite(v) ? v : -1;
+        }
+        function segTailSum(s, n) {
+            const t = segTailDigits(s, n);
+            let sm = 0;
+            for (let k = 0; k < t.length; k++) sm += Number(t[k]);
+            return t.length ? sm : -1;
+        }
+        function sortSegments(segs, n) {
+            const list = (segs || []).slice();
+            if (segSortMode !== 'value' && segSortMode !== 'sum') {
+                // KỲ LỚN NHẤT TRÊN CÙNG, giảm dần xuống dưới
+                list.sort(function (a, b) { return -segIssueCmp(a, b); });
+                return list;
+            }
+            list.sort(function (a, b) {
+                if (segSortMode === 'sum') {
+                    const ds = segTailSum(b, n) - segTailSum(a, n);
+                    if (ds) return ds;
+                    const dv = segTailValue(b, n) - segTailValue(a, n);
+                    if (dv) return dv;
+                } else {
+                    const dv = segTailValue(b, n) - segTailValue(a, n);   // số lớn nhất trên cùng
+                    if (dv) return dv;
+                }
+                return -segIssueCmp(a, b);   // trùng số → kỳ lớn nhất trước
+            });
+            return list;
+        }
+        function onSegSortChange() {
+            const el = segEl('segSort');
+            segSortMode = (el && el.value) ? el.value : 'value';
+            try { localStorage.setItem(LS_SEG_SORT, segSortMode); } catch (e) {}
+            updateSegSortInfo();
+            ddSync('segSort');
+            segRenderSafe();
+        }
+        function updateSegSortInfo() {
+            const info = segEl('segSortInfo');
+            if (!info) return;
+            info.textContent = segSortMode === 'sum'
+                ? 'Tổng 5 số phía sau lớn nhất trên cùng · trùng thì xếp theo ID kỳ xổ'
+                : (segSortMode === 'value'
+                    ? 'Số lớn nhất trên cùng, số nhỏ nhất dưới · trùng số thì xếp theo ID kỳ xổ'
+                    : 'Kỳ lớn nhất trên cùng, bé dần xuống dưới (theo ID kỳ xổ)');
+        }
+        // copy các số vừa nhập xuống 4 ô bên dưới (tối đa 4 số, lấy 4 số cuối)
+        function renderSegMirror(vals) {
+            const box = segEl('segMirror');
+            if (!box) return;
+            const show = (vals || []).slice(-4);
+            let html = '';
+            for (let i = 0; i < 4; i++) {
+                const v = (i < show.length) ? show[i] : '';
+                html += '<span class="seg-mir' + (v ? ' on' : '') + '" id="segM' + (i + 1) + '">' + (v ? segEsc(v) : '·') + '</span>';
+            }
+            box.innerHTML = html;
+        }
+        // Cuộn xuống khung kết quả để xem ngay (chờ bàn phím thu xuống đã rồi mới cuộn)
+        function segScrollToResults() {
+            try {
+                const body = segEl('dataTableBody');
+                const el = body || segEl('dataTablePanel');
+                if (!el) return;
+                if (body) body.scrollTop = 0;               // đoạn mới nhất luôn ở trên cùng
+                if (el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (e) {}
+        }
+        // TẮT BÀN PHÍM: bỏ focus khỏi mọi ô nhập (muốn nhập tiếp thì bấm vào ô đầu)
+        function segBlurAll() {
+            try {
+                if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+            } catch (e) {}
+            segInputIds().forEach(function (id) {
+                const e = segEl(id);
+                if (e && e.blur) { try { e.blur(); } catch (e2) {} }
+            });
+        }
+        function onSegInput(el) {
+            try {
+                el.value = String(el.value || '').replace(/\D/g, '').slice(0, 1);
+                const ids = segInputIds();
+                const idx = ids.indexOf(el.id);
+                // nhập xong 1 ô (trừ ô cuối) → nhảy focus sang ô tiếp theo
+                if (idx >= 0 && idx < ids.length - 1 && segIsDigit(el.value)) {
+                    const nx = segEl(ids[idx + 1]);
+                    if (nx) { try { nx.focus(); nx.select(); } catch (e2) {} }
+                }
+                // nhập đủ mọi ô VÀ ô vừa gõ là ô cuối → hiện kết quả ngay
+                const vals = segPrefixDigits();
+                const vuaGoOCuoi = (idx === ids.length - 1);
+                if (vuaGoOCuoi && vals.length && vals.every(segIsDigit)) {
+                    findSegmentsFromInput();
+                    // copy xuống 4 ô dưới, xoá sạch ô nhập, rồi TẮT BÀN PHÍM
+                    renderSegMirror(vals);
+                    segInputIds().forEach(function (id) {
+                        const e = segEl(id); if (e) e.value = '';
+                    });
+                    segBlurAll();
+                    // bàn phím vừa tắt → tự cuộn xuống khung kết quả cho xem
+                    setTimeout(segScrollToResults, SEG_SCROLL_DELAY);
+                }
+            } catch (e) {}
+        }
+        function clearSegInput() {
+            segInputIds().forEach(function (id) {
+                const e = segEl(id); if (e) e.value = '';
+            });
+            dataTableSeg = null;
+            renderSegMirror([]);
+            renderDataTable('latest');
+        }
+        function findSegmentsFromInput() {
+            segBoot();
+            const vals = segPrefixDigits();
+            if (!vals.length || !vals.every(segIsDigit)) {
+                segSetInfo('⚠️ Nhập đủ ' + segPrefixLen() + ' ô, mỗi ô một số từ 0 đến 9.', '#f87171');
+                return;
+            }
+            dataTableSeg = { prefix: vals, len: vals.length };
+            renderDataTable('segments');                    // tra ngay trên kho đang có trong máy
+            if (!fbDB) return;
+            const empty = gameArchive.length < vals.length + SEG_TAIL;
+            if (!empty && !segSyncing && Date.now() - segSyncAt < SEG_SYNC_MIN_GAP) return;
+            // kho trong máy trống hoặc đã lâu chưa đối chiếu → đọc kho trên Firebase; có kỳ mới thì bảng tự vẽ lại
+            if (empty) segSetInfo('☁️ Đang tải kho từ Firebase về máy (1 lần)…');
+            segStoreSync(empty ? function (m) { if (gameArchive.length < vals.length + SEG_TAIL) segSetInfo(m); } : null).then(function (ok) {
+                if (empty && !ok) segSetInfo('☁️ Chưa tải được kho từ Firebase (chưa có kho, mất mạng hoặc bị chặn quyền đọc).', '#f87171');
+            });
+        }
+        // khung hẹp không đủ chỗ cho "kỳ + các ô số" trên 1 dòng → xếp 2 tầng (xem CSS .dt-stack)
+        function segFitRows() {
+            const body = segEl('dataTableBody');
+            if (!body) return;
+            body.classList.remove('dt-stack');
+            const row = body.querySelector('.dt-row');
+            if (!row) return;
+            const a = row.querySelector('.dt-i'), b = row.querySelector('.dt-n');
+            if (a && b && b.offsetTop >= a.offsetTop + a.offsetHeight - 1) body.classList.add('dt-stack');
+        }
+        function segEmptyStoreHtml(remoteCount) {
+            if (segSyncing) return 'Đang tải kho từ Firebase về máy…';
+            if (remoteCount) {
+                return 'Kho đang ở <b>Firebase</b> (' + remoteCount.toLocaleString('vi-VN') + ' kỳ) — bấm "🧾 Lấy số" hoặc "🔎 Tìm đoạn" để tải về máy.';
+            }
+            return 'Kho trống — chưa đọc được kho đã lưu (trong máy hoặc trên Firebase).'
+                + '<br><span style="color:#64748b">Nếu đang mở trong khung xem thử (không có mạng, localStorage riêng) thì kho sẽ luôn là 0 — hãy mở file này bằng trình duyệt để thấy kho đã lưu.</span>';
+        }
+        function segHeadRow(total) {
+            return '<div class="dt-head-row"><span class="dt-i">Kỳ đầu đoạn</span><span class="dt-n">' + total
+                + ' Ô SỐ</span><span class="dt-t">Kỳ cuối · giờ</span></div>';
+        }
+        function renderDataTable(mode) {
+            if (mode) dataTableMode = mode;
+            const body = segEl('dataTableBody');
+            const cnt = segEl('dataTableCount');
+            if (!body) return;
+            const remoteCount = segRemote ? (Number(segRemote.count) || 0) : 0;
+            if (cnt) {
+                cnt.textContent = gameArchive.length
+                    ? (gameArchive.length + ' kỳ trong kho'
+                        + (remoteCount > gameArchive.length ? (' · ☁️ Firebase ' + remoteCount.toLocaleString('vi-VN') + ' kỳ') : ''))
+                    : (remoteCount
+                        ? ('☁️ Firebase: ' + remoteCount.toLocaleString('vi-VN') + ' kỳ' + (segSyncing ? ' · đang tải về…' : ''))
+                        : '0 kỳ trong kho');
+                cnt.title = [segSyncNote ? ('Đọc Firebase: ' + segSyncNote) : '', archiveSaveFailed].filter(Boolean).join(' · ');
+            }
+
+            if (dataTableMode === 'segments' && dataTableSeg) {
+                const prefix = dataTableSeg.prefix;
+                const n = prefix.length;
+                const total = n + SEG_TAIL;
+                const key = prefix.join('');
+                const segs = sortSegments(findSegments(prefix), n);
+                segSetInfo(segs.length
+                    ? ('Tìm thấy ' + segs.length + ' đoạn ' + total + ' số bắt đầu bằng ' + key + '.')
+                    : ('Không có đoạn ' + total + ' số nào bắt đầu bằng ' + key + ' trong kho đang có.'),
+                    segs.length ? '#4ade80' : '#f87171');
+                let html = segHeadRow(total);
+                if (!segs.length) {
+                    html += '<div class="ch-empty">' + (gameArchive.length
+                        ? 'Không có đoạn nào — thử dãy số khác.'
+                        : segEmptyStoreHtml(remoteCount)) + '</div>';
+                } else {
+                    for (let i = 0; i < segs.length && i < SEG_ROW_LIMIT; i++) {
+                        const s = segs[i];
+                        let boxes = '';
+                        for (let k = 0; k < total; k++) {
+                            // các ô nhập = tím · số phía sau < 5 = nền sáng · số ≥ 5 = không tô
+                            const dg = s.digits[k];
+                            const cls = (k < n) ? 'hit' : ((Number(dg) < 5) ? 'rest' : '');
+                            boxes += '<span class="dt-box ' + cls + '">' + segEsc(dg) + '</span>';
+                        }
+                        html += '<div class="dt-row"><span class="dt-i">' + segEsc(s.start.i) + '</span>'
+                            + '<span class="dt-n dt-boxes">' + boxes + '</span>'
+                            + '<span class="dt-t">' + segEsc(s.end.i) + ' · ' + (s.end.t ? fmtTime(s.end.t) : '') + '</span></div>';
+                    }
+                    if (segs.length > SEG_ROW_LIMIT) {
+                        html += '<div class="ch-empty">… chỉ hiện ' + SEG_ROW_LIMIT + ' đoạn đầu theo thứ tự sắp xếp / ' + segs.length + ' đoạn.</div>';
+                    }
+                }
+                body.innerHTML = html;
+                segFitRows();
+                return;
+            }
+
+            // ---- CHƯA nhập số → bảng để trống, chỉ hiện dòng hướng dẫn ----
+            segSetInfo('Nhập ' + segPrefixLen() + ' số (0-9) — nhập xong ô cuối là hiện các đoạn '
+                + segTotalLen() + ' số bắt đầu bằng dãy đó, mới nhất ở trên.');
+            let html = segHeadRow(segTotalLen());
+            html += '<div class="ch-empty">'
+                + (gameArchive.length
+                    ? ('Kho đang có <b>' + gameArchive.length + '</b> kỳ — nhập ' + segPrefixLen() + ' số ở trên để tra đoạn ' + segTotalLen() + ' số.')
+                    : segEmptyStoreHtml(remoteCount))
+                + '</div>';
+            body.innerHTML = html;
+            body.classList.remove('dt-stack');
+        }
+        function segMeasure() {
+            try { document.documentElement.style.setProperty('--seg-avail', document.documentElement.clientWidth + 'px'); } catch (e) {}
+        }
+        function segInit() {
+            if (!segEl('dataTablePanel')) return;
+            segMeasure();
+            window.addEventListener('resize', function () {
+                clearTimeout(segResizeTimer);
+                segResizeTimer = setTimeout(function () { segMeasure(); try { segFitRows(); } catch (e) {} }, 120);
+            });
+            const on = function (id, type, fn) { const el = segEl(id); if (el) el.addEventListener(type, fn); };
+            on('segLen', 'change', onSegLenChange);
+            on('segSort', 'change', onSegSortChange);
+            on('segBtnFind', 'click', function () { findSegmentsFromInput(); });
+            on('segBtnTake', 'click', function () { segTakeLast(); });
+            on('segBtnClear', 'click', function () { clearSegInput(); });
+            on('segInputs', 'input', function (ev) {
+                const t = ev.target;
+                if (t && t.classList && t.classList.contains('seg-in')) onSegInput(t);
+            });
+            document.addEventListener('click', function () { ddCloseAll(null); });
+            // tab khác (trang cũ) vừa lưu kho → gộp phần mới vào; kho bị xoá → xoá theo
+            window.addEventListener('storage', function (ev) {
+                if (!ev || ev.key !== LS_GAME_ARCHIVE || !segStoreLoaded) return;
+                clearTimeout(segStorageTimer);
+                segStorageTimer = setTimeout(function () {
+                    try {
+                        const raw = segReadLocalRaw();
+                        if (!raw || raw === 'v2|' || raw === '[]') { gameArchive = []; gameArchiveKeys = new Set(); }
+                        else segMergeEntries(segParseArchive(raw));
+                    } catch (e) {}
+                    segRenderSafe();
+                }, 3000);
+            });
+            // khôi phục lựa chọn đã lưu
+            try {
+                let sv = localStorage.getItem(LS_SEG_SORT);
+                if (sv === 'newest') sv = 'issue';          // tên cũ → tên mới
+                if (sv === 'issue' || sv === 'value' || sv === 'sum') segSortMode = sv;
+            } catch (e) {}
+            try {
+                const lv = parseInt(localStorage.getItem(LS_SEG_LEN), 10);
+                const sl = segEl('segLen');
+                if (sl && lv >= 2 && lv <= 6) sl.value = String(lv);
+            } catch (e) {}
+            const ss = segEl('segSort');
+            if (ss) ss.value = segSortMode;
+            updateSegSortInfo();
+            renderSegInputs(false);
+            ddInit('segLen');
+            ddInit('segSort');
+            renderDataTable('latest');
+            // nạp kho trong máy sau khi bảng đã vẽ xong, rồi đối chiếu với kho trên Firebase
+            setTimeout(function () {
+                segBoot();
+                if (fbDB) setTimeout(function () { segStoreSync(null); }, 1200);
+            }, 250);
+        }
+
         initGrid();
         loadToken();
         const hasLocalBoard = loadBoardLocal();
+        pdInit();
+        try { segInit(); } catch (e) {}
         startRealtimeSync();
         if (hasLocalBoard) setStatus('Đã mở bảng đã lưu · đang kiểm tra kết quả mới…');
         else if (!getToken()) setStatus('Bấm “Token” để nhập token và nạp 100 kỳ vào bảng.');
@@ -1393,5 +3164,5 @@
         }, 30000);
     })();
     </script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a58640c1e8ab51da',t:'MTc5NDMyNjI0Ng=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a58640c1e8ab51da',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
