@@ -152,6 +152,14 @@
             }
             .grid-cell.chain-next .val-input { color: #3b1702 !important; text-shadow: 0 1px 1px rgba(255,255,255,.65); }
             .grid-cell.chain-next .stt-label { color: #78350f !important; }
+            /* Chớp lướt: sang kỳ mới / đổi x thì sáng bừng + nảy lên rồi thôi (thấy rõ ô xanh đang chạy theo) */
+            .grid-cell.chain-flash { position: relative; z-index: 5; animation: flashSweep .75s ease-out 1; }
+            @keyframes flashSweep {
+                0% { filter: brightness(1); transform: scale(1); }
+                30% { filter: brightness(1.8); transform: scale(1.12); }
+                100% { filter: brightness(1); transform: scale(1); }
+            }
+            @media (prefers-reduced-motion: reduce) { .grid-cell.chain-flash { animation: none; } }
             @keyframes chainPulse {
                 0%, 100% { background: linear-gradient(180deg,#fffbe0 0%,#ffe140 45%,#ffb000 100%); box-shadow: 0 0 0 1px #fff, 0 0 6px 2px rgba(255,205,40,.85); transform: scale(1); }
                 50% { background: linear-gradient(180deg,#ffffff 0%,#fff59d 40%,#ffd000 100%); box-shadow: 0 0 0 2px #fff, 0 0 18px 6px rgba(255,215,0,1); transform: scale(1.06); }
@@ -1935,35 +1943,43 @@
                 }
             
                 // ===== TÔ MÀU BẢNG =====
-                //  · Ô STT−x của 10 kỳ sắp đánh (đang dùng để chọn cửa) → nền XANH.
-                //  · Ô STT−x dùng để chọn cửa cho kỳ sắp đánh (khi đang BẬT) → nhấp nháy vàng.
-                //  · Ô đã dùng trong lượt chạy này: thắng → xanh · thua → đỏ · đang chờ kết quả → viền vàng.
-                //  (Đã bỏ hẳn cách tô NNN / LLL ở hai đầu và NN / LL ở giữa.)
-                function applyRunHighlight() {
-                    const st = (rb.chain && typeof rb.chain === 'object') ? rb.chain : { on: false, marks: {} };
+                //  · Loạt 10 ô đã chốt: mỗi ô = 1 kỳ sắp đánh + ô nguồn STT−x của nó → nền XANH.
+                //    Màu dính theo STT của ô nguồn nên khi bảng trôi, các ô xanh trôi theo (317 vẫn xanh ở 317).
+                //  · Ô đang dùng cho kỳ sắp đánh (khi đang BẬT) → nhấp nháy vàng.
+                //  · Ô đã đánh trong loạt này: thắng → xanh lá · thua → đỏ · đang chờ kết quả → viền vàng.
+                //  Hết ô 10 → sang loạt mới: 10 ô nguồn mới được chốt và tô lại.
+                let flashLastNewest = '';
+                function applyRunHighlight(opts) {
+                    if (!rb.chain || typeof rb.chain !== 'object') rb.chain = rbChainBlank();
+                    const st = rb.chain;
                     let nextIdx = -1;
-                    const refSet = new Set();               // ô STT−x của 10 kỳ sắp đánh → xanh
-                    const refInfo = {};                     // idx -> ['ô TH2 (−35)', ...] để ghi chú thích
-                    // Luôn tô ô đối chiếu cho CẢ 10 kỳ sắp đánh
-                    // — kể cả khi CHƯA BẬT và CHƯA có token, để còn nhìn bảng mà đối chiếu.
-                    const seqAll = rbRowSeq();
-                    for (let j = 0; j < seqAll.length; j++) {
-                        const e = seqAll[j];
-                        if (!e.issue) continue;
-                        const x = scOffsetAt(j);
-                        const ref = rbCellOfN(e.n - x);
+                    const flashOrder = [];                // ô đối chiếu theo thứ tự ô 1→10 (để chớp lướt)
+                    const refSet = new Set();               // ô nguồn ĐÃ CHỐT của loạt → tô xanh
+                    const refInfo = {};                     // idx -> ['ô 2 (−35)', ...] để ghi chú thích
+                    // 10 ô xanh = 10 ô nguồn đã chốt của loạt đang chạy. Ô chốt theo STT nên khi bảng trôi,
+                    // màu đi theo đúng ô đó (317 vẫn xanh ở 317), không đứng im một chỗ.
+                    const planNow = rbChainPlan();
+                    const batchNow = (planNow && st.batch && rbChainBatchOk(st.batch)) ? st.batch : null;
+                    const listNow = batchNow ? batchNow.cells : [];
+                    for (let j = 0; j < listNow.length; j++) {
+                        const c = listNow[j];
+                        if (!c || !c.i || !c.ref) continue;
+                        const ref = rbCellOfN(Number(c.ref));
                         if (!ref) continue;
                         const idx = cells.indexOf(ref);
                         refSet.add(idx);
-                        (refInfo[idx] = refInfo[idx] || []).push('ô TH' + (j + 1) + ' (−' + x + ')');
+                        flashOrder.push(ref);
+                        (refInfo[idx] = refInfo[idx] || []).push('ô ' + (j + 1) + ' (−' + c.off + ')');
                     }
-                    if (st.on) {
-                        const issue = rbCurrentIssue();
-                        // mọi kỳ đều tra ô STT−x → ô đang dùng = ô STT−x của kỳ sắp đánh (ô đầu dãy)
-                        const nNow = issue ? rbN(issue) : NaN;
-                        const src = rbCellOfN(nNow - scOffsetAt(0));
+                    if (st.on && planNow && planNow.cell && planNow.cell.ref) {
+                        // Ô đang dùng = ô nguồn của kỳ sắp đánh (ô của loạt đang chạy)
+                        const src = rbCellOfN(Number(planNow.cell.ref));
                         if (src) nextIdx = cells.indexOf(src);
                     }
+                    // Đổi ô đang dùng (sang kỳ mới / sang loạt mới) → chớp lướt cho thấy vừa chuyển ô.
+                    const planKey = planNow ? ((planNow.batch && planNow.batch.base ? planNow.batch.base : '') + '#' + planNow.ri) : '';
+                    const curChanged = !!(planKey && planKey !== flashLastNewest);
+                    if (planKey) flashLastNewest = planKey;
                     for (let k = 0; k < TOTAL; k++) {
                         const box = cells[k].valEl.parentElement;
                         const list = box.classList;
@@ -1980,6 +1996,22 @@
                             box.title = (cells[k].baseTitle || box.title) + ' · tra cho ' + info.join(' + ');
                             box.setAttribute('aria-label', box.title);
                         }
+                    }
+                    // Chớp lướt: sang ô kế trong loạt / sang loạt mới thì chạy thứ tự ô 1→10 · đổi x thì chớp cùng lúc.
+                    const wantFlash = (opts && opts.flash) || curChanged;
+                    if (wantFlash && flashOrder.length) {
+                        const cascade = !(opts && opts.flash);
+                        flashOrder.forEach(function (cell, i) {
+                            setTimeout(function () {
+                                try {
+                                    const box = cell.valEl.parentElement;
+                                    box.classList.remove('chain-flash');
+                                    void box.offsetWidth;
+                                    box.classList.add('chain-flash');
+                                    setTimeout(function () { try { box.classList.remove('chain-flash'); } catch (e2) {} }, 750);
+                                } catch (e) {}
+                            }, cascade ? (i * 55) : 0);
+                        });
                     }
                 }
 
@@ -3410,6 +3442,10 @@ function openTokenDialog() {
                 //   x = số trừ lùi của ô đó trong dãy tín hiệu, mặc định 40):
                 //         ô đó ra 0-4 → đánh NHỎ · ô đó ra 5-9 → đánh LỚN
                 //     LUÔN ĐÁNH THUẬN — không đảo ngược, không theo dõi thắng/thua.
+                //   • Dãy tín hiệu là LOẠT 10 Ô CỐ ĐỊNH: ô thứ k của loạt = kỳ (base+k), tra ô
+                //     STT (n_k − x_k) và CHỐT 1 lần. Kỳ mới không tính lại → màu xanh dính đúng STT
+                //     của ô nguồn và trôi theo bảng (317 vẫn xanh ở 317 khi bảng chạy lên).
+                //   • Hết 1 kỳ là sang ô kế tiếp — thắng hay thua đều như nhau. Hết ô 10 → sang loạt mới.
                 //   • Ô cần tra chưa có số trên bảng → không đặt lệnh kỳ đó (chờ đủ số).
                 //   • Tiền cược theo thang cược: thua lên mức kế, thắng về mức 1.
                 // =====================================================================
@@ -3422,7 +3458,9 @@ function openTokenDialog() {
 
 
                 function rbChainBlank() {
-                    return { on: false, row: 1, marks: {}, inv: false };
+                    // ri = ô đang dùng trong loạt (0..9) · batch = loạt 10 ô ĐANG chạy (đã chốt, không tính lại
+                    // theo kỳ mới) · next = loạt kế chốt sẵn để dãy tín hiệu luôn đủ 10 ô · marks = dấu W/L dính STT
+                    return { on: false, ri: 0, batch: null, next: null, marks: {}, inv: false };
                 }
 
                 // Dãy 10 ô dóng với hàng 10 (mỗi ô = 1 kỳ sắp đánh, tính từ kỳ ngay sau kỳ mới nhất trên bảng)
@@ -3450,7 +3488,122 @@ function openTokenDialog() {
                     return null;
                 }
 
-                // Cửa đánh cho 1 kỳ. Trả về: 'B' · 'S' · '' (không xác định được)
+
+                // Khoá dính màu theo ô: 3 số cuối STT (317 → '317', 007 → '7')
+                function rbRefKey(n) {
+                    if (!Number.isFinite(n)) return '';
+                    return String(((Math.round(n) % 1000) + 1000) % 1000);
+                }
+
+                // Cộng kỳ: 347 → 348 … (qua ngày thì nhảy 0001 như pdNextIssue)
+                function rbIssueShift(issue, count) {
+                    let s = String(issue || '');
+                    for (let k = 0; k < count && s; k++) s = pdNextIssue(s);
+                    return s;
+                }
+
+                // CHỐT 1 loạt 10 ô: ô k = kỳ (base+k) tra ô STT (n_k − x_k). Chốt 1 lần rồi giữ nguyên,
+                // không tính lại theo kỳ mới → ô xanh dính đúng STT và trôi cùng bảng.
+                function rbChainCells(baseIssue) {
+                    const out = [];
+                    let issue = String(baseIssue || '');
+                    for (let k = 0; k < 10; k++) {
+                        if (!issue) { out.push({ i: '', n: NaN, off: scOffsetAt(k), ref: '', side: '' }); continue; }
+                        const n = rbN(issue);
+                        const off = scOffsetAt(k);
+                        const refN = n - off;
+                        const cell = rbCellOfN(refN);
+                        const kind = cell ? pdKind(cell.value) : '';
+                        out.push({ i: issue, n: n, off: off, ref: rbRefKey(refN), side: kind === 'B' ? 'B' : (kind === 'S' ? 'S' : '') });
+                        issue = pdNextIssue(issue);
+                    }
+                    return out;
+                }
+
+                function rbChainBatchSign(baseIssue) {
+                    return baseIssue ? { base: String(baseIssue), cells: rbChainCells(baseIssue) } : null;
+                }
+
+                function rbChainBatchOk(b) {
+                    return !!(b && Array.isArray(b.cells) && b.cells.length === 10 && b.cells[0] && b.cells[0].i);
+                }
+
+                // Loạt đang chạy phải khớp kỳ sắp đánh: kỳ nào đã qua thì bỏ ô đó (không đánh),
+                // hết ô 10 → sang loạt mới. Bảng nhảy lùi → chốt lại loạt từ kỳ sắp đánh.
+                function rbChainPlan() {
+                    const newest = pdNewestIssue();
+                    if (!newest) return null;
+                    const up = pdNextIssue(newest);
+                    if (!up) return null;
+                    const st = rb.chain;
+                    if (!st) return null;
+                    let dirty = false;
+                    if (!rbChainBatchOk(st.batch)) {
+                        st.batch = rbChainBatchSign(up);
+                        st.next = rbChainBatchSign(rbIssueShift(up, 10));
+                        st.ri = 0;
+                        st.marks = {};
+                        dirty = true;
+                    }
+                    if (!rbChainBatchOk(st.batch)) return null;
+                    if (!rbChainBatchOk(st.next)) {
+                        st.next = rbChainBatchSign(rbIssueShift(st.batch.cells[0].i, 10));
+                        dirty = true;
+                    }
+                    let guard = 0;
+                    while (guard++ < 30) {
+                        const cur = st.batch.cells[st.ri];
+                        if (!cur || !cur.i) break;
+                        if (cur.i === up) break;
+                        if (issueGreater(cur.i, up)) {                 // loạt đang ở phía trước kỳ sắp đánh → chốt lại
+                            st.batch = rbChainBatchSign(up);
+                            st.next = rbChainBatchSign(rbIssueShift(up, 10));
+                            st.ri = 0;
+                            st.marks = {};
+                            dirty = true;
+                            break;
+                        }
+                        st.ri++;                                       // kỳ này đã qua → sang ô kế (dù thắng hay thua)
+                        if (st.ri > 9) {                               // hết ô 10 → sang loạt mới
+                            st.batch = rbChainBatchOk(st.next) ? st.next : rbChainBatchSign(up);
+                            st.ri = 0;
+                            st.marks = {};
+                            dirty = true;
+                            if (!rbChainBatchOk(st.batch)) return null;
+                            st.next = rbChainBatchSign(rbIssueShift(st.batch.cells[0].i, 10));
+                        }
+                    }
+                    // Chốt hạ: loạt phải đứng đúng kỳ sắp đánh (bảng nhảy quá xa / dữ liệu lạ) → chốt lại từ đầu.
+                    const cur0 = st.batch.cells[st.ri];
+                    if (!cur0 || cur0.i !== up) {
+                        st.batch = rbChainBatchSign(up);
+                        st.next = rbChainBatchSign(rbIssueShift(up, 10));
+                        st.ri = 0;
+                        st.marks = {};
+                        dirty = true;
+                    }
+                    if (!rbChainBatchOk(st.batch)) return null;
+                    const cur = st.batch.cells[st.ri] || null;
+                    // Ô đã chốt mà lúc chốt chưa có số (ô nguồn mới xuất hiện sau) → điền bù, giữ đúng STT đã chốt.
+                    if (cur && cur.i && !cur.side && cur.ref) {
+                        const src2 = rbCellOfN(Number(cur.ref));
+                        const kind2 = src2 ? pdKind(src2.value) : '';
+                        if (kind2) { cur.side = (kind2 === 'B') ? 'B' : 'S'; dirty = true; }
+                    }
+                    if (dirty) rbSave();
+                    return { issue: up, ri: st.ri, cell: cur, batch: st.batch };
+                }
+
+                // Đổi x → chốt lại ô nguồn của loạt đang chạy (giữ nguyên kỳ gốc của loạt).
+                function rbChainResign() {
+                    const st = rb.chain;
+                    if (!st || !rbChainBatchOk(st.batch)) { if (st) { st.batch = null; st.next = null; st.ri = 0; } return; }
+                    st.batch = rbChainBatchSign(st.batch.base);
+                    st.next = rbChainBatchSign(rbIssueShift(st.batch.base, 10));
+                    st.marks = {};
+                    rbSave();
+                }
+
                 // MỌI kỳ đều tra ô STT−x rồi đánh THUẬN đúng như ô đó (0-4 → NHỎ · 5-9 → LỚN).
                 // (x = số trừ lùi của ô đó trong dãy tín hiệu; không truyền x thì tự tìm theo kỳ.)
                 function rbSideFor(issue, off) {
@@ -3464,32 +3617,43 @@ function openTokenDialog() {
                 }
 
                 // Dãy 10 ô sắp đánh — mọi ô đều THUẬN.
+                // Dãy 10 ô tín hiệu = 10 ô CÒN LẠI của loạt đang chạy (ô đầu = kỳ sắp đánh, đang dùng),
+                // nối tiếp bằng các ô đã chốt của loạt kế. Mọi ô đều THUẬN, không đảo theo thắng/thua.
                 function rbSeqPlan() {
-                    const seq = rbRowSeq();
                     const out = [];
-                    for (let k = 0; k < seq.length; k++) {
-                        const e = seq[k];
-                        const off = scOffsetAt(k);
-                        out.push({ issue: e.issue, n: e.n, inv: false, off: off, side: e.issue ? rbSideFor(e.issue, off) : '' });
+                    const plan = rbChainPlan();
+                    const st = rb.chain;
+                    for (let k = 0; k < 10; k++) {
+                        let c = null;
+                        if (plan && st) {
+                            const d = plan.ri + k;
+                            if (d <= 9 && st.batch) c = st.batch.cells[d];
+                            else if (rbChainBatchOk(st.next)) c = st.next.cells[d - 10];
+                        }
+                        if (!c) { out.push({ issue: '', n: NaN, inv: false, off: scOffsetAt(k), side: '' }); continue; }
+                        out.push({ issue: c.i, n: c.n, inv: false, off: c.off, side: c.side, ref: c.ref, pos: (plan.ri + k) % 10 + 1 });
                     }
                     return out;
                 }
-
                 // Cửa của lệnh sắp tới (kỳ ngay sau kỳ mới nhất trên bảng)
+                // Cửa của lệnh sắp tới = cửa của ô đang dùng trong loạt (đã chốt, chỉ đọc lại)
                 function rbChainChoice() {
                     const st = rb.chain;
                     if (!st || !st.on) return '';
-                    const issue = rbCurrentIssue();
-                    return issue ? rbSideFor(issue) : '';
+                    const plan = rbChainPlan();
+                    return plan && plan.cell ? (plan.cell.side || '') : '';
                 }
 
+                // Kỳ sắp đánh = kỳ của ô đang dùng trong loạt
                 function rbCurrentIssue() {
+                    const plan = rbChainPlan();
+                    if (plan && plan.issue) return plan.issue;
                     const newest = pdNewestIssue();
                     return newest ? pdNextIssue(newest) : '';
                 }
-
                 // Chấm 1 lệnh. Đã nằm trong rbCommit (không tự đọc/ghi bộ nhớ).
-                //  • Chỉ ghi dấu W/L lên ô nguồn STT−x để nhìn lại; KHÔNG đảo nhịp (luôn thuận).
+                // Chấm 1 lệnh: ghi dấu W/L lên ô nguồn (dính theo STT của ô) để nhìn lại.
+                // Ô kế tiếp đã tự sang từ lúc ra kỳ mới (rbChainPlan) — thắng hay thua đều đi tiếp như nhau.
                 function rbChainAfterBet(issue, c, ok, offHint) {
                     const st = rb.chain;
                     if (!st || !st.on) return;
@@ -3498,13 +3662,23 @@ function openTokenDialog() {
                         const at = st.marks[k] || {};
                         if (at.i === issue && at.r === '?') delete st.marks[k];
                     }
-                    const n = rbN(issue);
-                    const x = (offHint === undefined) ? rbOffsetForIssue(issue) : scNormOff(offHint);
-                    const srcN = n - x;
-                    const cell = rbCellOfN(srcN);
-                    const has = !!(cell && pdKind(cell.value));
-                    if (has) {
-                        const key = String(((srcN % 1000) + 1000) % 1000);   // dấu dính theo ô có STT này
+                    // Tìm đúng ô của loạt đã dùng cho kỳ này → dấu dính theo STT của ô đó.
+                    let key = '';
+                    const pools = [st.batch, st.next];
+                    for (let p = 0; p < pools.length && !key; p++) {
+                        const b = pools[p];
+                        if (!b || !Array.isArray(b.cells)) continue;
+                        for (let k = 0; k < b.cells.length; k++) {
+                            if (b.cells[k] && b.cells[k].i === issue) { key = b.cells[k].ref || ''; break; }
+                        }
+                    }
+                    if (!key) {
+                        const n = rbN(issue);
+                        const x = (offHint === undefined) ? rbOffsetForIssue(issue) : scNormOff(offHint);
+                        key = rbRefKey(n - x);
+                    }
+                    const cell = key ? rbCellOfN(Number(key)) : null;
+                    if (cell && pdKind(cell.value)) {
                         st.marks[key] = { i: issue, r: ok ? 'W' : 'L' };
                         for (const k in st.marks) {
                             const at = st.marks[k] || {};
@@ -3513,7 +3687,6 @@ function openTokenDialog() {
                     }
                     // luôn đánh thuận: không đảo nhịp dù thắng hay thua
                 }
-
                 // Khung dự đoán KHÔNG còn tự bấm: mọi thứ chạy theo STT ở khung CƯỢC THẬT.
                 function pdMaybeAutoPick() { return; }
 
@@ -3893,7 +4066,7 @@ function openTokenDialog() {
                         bet: null,              // lệnh đã gửi, chưa có kết quả: { issue, base, c, n, lvl, fl, at, endAt, st, vAt, why }
                         posted: '',             // kỳ gần nhất đã gửi lệnh (mỗi kỳ chỉ gửi 1 lần)
                         last: null,             // lệnh thật vừa chấm xong: { issue, c, ok }
-                        chain: null,            // tín hiệu theo STT: { on, row, marks, inv }
+                        chain: rbChainBlank(),  // tín hiệu theo loạt: { on, ri, batch, next, marks, inv }
                         fail: 0,                // số lần liên tiếp lệnh không vào
                         win: 0,
                         lose: 0,
@@ -3996,9 +4169,33 @@ function openTokenDialog() {
                             if (at.r !== 'W' && at.r !== 'L' && at.r !== '?') continue;
                             marks[String(Number(k))] = { i: isIssue(at.i) ? at.i : '', r: at.r };
                         }
+                        const normBatch = function (b) {
+                            if (!b || typeof b !== 'object' || !isIssue(b.base)) return null;
+                            if (!Array.isArray(b.cells) || b.cells.length !== 10) return null;
+                            const cs = [];
+                            for (let k = 0; k < 10; k++) {
+                                const c = b.cells[k];
+                                if (!c || typeof c !== 'object' || !isIssue(c.i)) return null;
+                                const n = Number(c.n);
+                                let off = Math.round(Number(c.off));
+                                if (!Number.isFinite(n) || !Number.isFinite(off)) return null;
+                                if (off < 1) off = 1;
+                                if (off > 99) off = 99;
+                                cs.push({
+                                    i: c.i,
+                                    n: n,
+                                    off: off,
+                                    ref: /^\d{1,3}$/.test(String(c.ref == null ? '' : c.ref)) ? String(c.ref) : '',
+                                    side: isSide(c.side) ? c.side : ''
+                                });
+                            }
+                            return { base: b.base, cells: cs };
+                        };
                         out.chain = {
                             on: ch.on === true,
-                            row: int(ch.row, 1, ROWS, 1),
+                            ri: int(ch.ri, 0, 9, 0),                          // ô đang dùng trong loạt (0..9)
+                            batch: normBatch(ch.batch),                       // loạt 10 ô đang chạy (đã chốt)
+                            next: normBatch(ch.next),                         // loạt kế (chốt sẵn cho đủ 10 ô)
                             marks: marks,
                             inv: false                            // luôn đánh THUẬN (không còn đảo)
                         };
@@ -4824,16 +5021,19 @@ function openTokenDialog() {
                             }
                         });
                     }
-                    const c = rbChainChoice();
+                    // Ô đang dùng của loạt (đã chốt) — cửa cược lấy đúng từ ô này, không tính lại theo kỳ mới.
+                    const batchPlan = rbChainPlan();
+                    const cellNow = batchPlan ? batchPlan.cell : null;
+                    const c = cellNow ? (cellNow.side || '') : '';
                     if (!c) {
-                        // Kỳ này phải tra ô STT−x mà ô đó chưa có số trên bảng → chưa biết cược chiều nào.
-                        const nxIssue = pdNextIssue(newest);
+                        // Ô của loạt chưa có số trên bảng → chưa biết cược chiều nào.
+                        const nxIssue = cellNow ? cellNow.i : pdNextIssue(newest);
                         const t = rbN(nxIssue) % 10;
-                        const off0 = rbOffsetForIssue(nxIssue);
+                        const off0 = cellNow ? scNormOff(cellNow.off) : rbOffsetForIssue(nxIssue);
                         rbTry.msg = 'phải tra ô STT−' + off0 + ' (tận cùng ' + t + ') mà ô đó chưa có số trên bảng';
                         return null;
                     }
-                    const issue = pdNextIssue(newest);
+                    const issue = cellNow ? cellNow.i : pdNextIssue(newest);
                     if (!issue || rb.posted === issue || rbPostedMem[issue]) return null;
                     if (rbTry.issue === issue && (rbTry.n >= RB_PREP_TRIES || now < rbTry.nextAt)) return null;
                     const count = rb.levels[rb.lvl];
@@ -4846,11 +5046,11 @@ function openTokenDialog() {
                     for (const k in rb.chain.marks) {
                         if ((rb.chain.marks[k] || {}).r === '?') delete rb.chain.marks[k];
                     }
-                    const planOff = rbOffsetForIssue(issue);
-                    const srcN = rbN(issue) - planOff;
-                    const srcCell = rbCellOfN(srcN);
+                    const planOff = cellNow ? scNormOff(cellNow.off) : rbOffsetForIssue(issue);
+                    const srcKey = cellNow ? (cellNow.ref || '') : rbRefKey(rbN(issue) - planOff);
+                    const srcCell = srcKey ? rbCellOfN(Number(srcKey)) : null;
                     if (srcCell && pdKind(srcCell.value)) {
-                        rb.chain.marks[String(((srcN % 1000) + 1000) % 1000)] = { i: issue, r: '?' };
+                        rb.chain.marks[srcKey] = { i: issue, r: '?' };   // dấu dính theo STT của ô nguồn
                     }
                     return { issue: issue, base: newest, c: c, follow: false, lvl: rb.lvl, n: count, off: planOff };
                 }
@@ -5739,20 +5939,32 @@ function openTokenDialog() {
                         }, { merge: true }).catch(function () {});
                     } catch (e) {}
                 }
-                // x dùng cho 1 kỳ = x của vị trí kỳ đó trong dãy 10 ô sắp đánh (ngoài dãy → 40).
+                // x dùng cho 1 kỳ = x đã chốt của ô mang kỳ đó trong loạt đang chạy / loạt kế.
+                // (Ngoài loạt → x của vị trí kỳ đó trong dãy 10 ô; vẫn ngoài → 40.)
                 function rbOffsetForIssue(issue, seq) {
                     if (!issue) return SC_OFF_DEF;
+                    const st = rb.chain;
+                    const pools = st ? [st.batch, st.next] : [];
+                    for (let p = 0; p < pools.length; p++) {
+                        const b = pools[p];
+                        if (!b || !Array.isArray(b.cells)) continue;
+                        for (let k = 0; k < b.cells.length; k++) {
+                            if (b.cells[k] && b.cells[k].i === issue) return scNormOff(b.cells[k].off);
+                        }
+                    }
                     const s = seq || rbRowSeq();
                     for (let k = 0; k < s.length; k++) {
                         if (s[k] && s[k].issue === issue) return scOffsetAt(k);
                     }
                     return SC_OFF_DEF;
                 }
-                // Gọi mỗi khi x thay đổi: vẽ lại dãy tín hiệu, ô đối chiếu trên bảng và khung cược thật.
+                // Gọi mỗi khi x thay đổi: chốt lại ô nguồn của loạt đang chạy rồi vẽ lại dãy tín hiệu,
+                // ô đối chiếu trên bảng và khung cược thật.
                 function scOffsetsChanged() {
                     scSeqKey = '';
+                    try { rbChainResign(); } catch (e) {}          // đổi x → loạt đang chạy tính lại ô nguồn theo x mới
                     try { scRender(); } catch (e) {}
-                    try { applyRunHighlight(); } catch (e) {}
+                    try { applyRunHighlight({ flash: true }); } catch (e) {}
                     try { rbRender(); } catch (e) {}
                 }
                 // Mở nhiều tab: tab kia sửa x thì tab này nạp lại và vẽ lại theo.
@@ -5775,7 +5987,15 @@ function openTokenDialog() {
                 const scEditSaveBtn = document.getElementById('scEditSave');
                 const scEditCloseBtn = document.getElementById('scEditClose');
                 const scEditResetBtn = document.getElementById('scEditReset');
-                let scEditK = -1;                     // vị trí đang sửa (0..9), -1 = đang đóng
+                let scEditK = -1;                     // ô đang sửa trong DÃY (0..9), -1 = đang đóng
+                let scEditPos = -1;                   // vị trí x tương ứng trong loạt (0..9)
+                // Ô thứ k của dãy ứng với vị trí x nào của loạt: dãy bắt đầu từ ô đang dùng
+                // nên khi loạt đã chạy tới ô 4 thì ô đầu dãy là vị trí x số 4.
+                function scPosOf(k) {
+                    const plan = rbChainPlan();
+                    if (!plan) return k;
+                    return (plan.ri + k) % 10;
+                }
                 function scEditNote2(text, kind) {
                     if (!scEditNote) return;
                     scEditNote.textContent = text;
@@ -5813,21 +6033,23 @@ function openTokenDialog() {
                     const e = seq[scEditK] || {};
                     const t = Number.isFinite(e.n) ? (((Math.round(e.n) % 10) + 10) % 10) : NaN;
                     if (scEditTitle) scEditTitle.textContent = e.issue
-                        ? ('Ô ' + (scEditK + 1) + ' · kỳ ' + pdShort(e.issue) + ' · tận cùng ' + t)
-                        : ('Ô ' + (scEditK + 1) + ' · chưa có kỳ');
+                        ? ('Ô ' + (scPosOf(scEditK) + 1) + '/10 · kỳ ' + pdShort(e.issue) + ' · tận cùng ' + t)
+                        : ('Ô ' + (scPosOf(scEditK) + 1) + '/10 · chưa có kỳ');
                     scEditPreview();
                 }
                 function scOpenEdit(k) {
                     if (!scEditEl || !scEditInput) return;
                     scEditK = k;
+                    scEditPos = scPosOf(k);
                     scEditEl.hidden = false;
-                    scEditInput.value = String(scOffsetAt(k));
+                    scEditInput.value = String(scOffsetAt(scEditPos));
                     scRefreshEdit();
                     scMarkEdit();
                     try { scEditInput.focus(); scEditInput.select(); } catch (e) {}
                 }
                 function scCloseEdit() {
                     scEditK = -1;
+                    scEditPos = -1;
                     if (scEditEl) scEditEl.hidden = true;
                     scMarkEdit();
                 }
@@ -5844,7 +6066,8 @@ function openTokenDialog() {
                         return;
                     }
                     if (!scOffsets) scLoadOffsets();
-                    scOffsets[scEditK] = Number(raw);
+                    if (scEditPos < 0) scEditPos = scPosOf(scEditK);
+                    scOffsets[scEditPos] = Number(raw);
                     scSaveOffsets(true);
                     const k = scEditK;
                     if (k < 9) { scOffsetsChanged(); scOpenEdit(k + 1); }   // lưu xong tự qua ô kế để nhập nhanh
@@ -5867,13 +6090,14 @@ function openTokenDialog() {
                     scOffsets = [SC_OFF_DEF, SC_OFF_DEF, SC_OFF_DEF, SC_OFF_DEF, SC_OFF_DEF, SC_OFF_DEF, SC_OFF_DEF, SC_OFF_DEF, SC_OFF_DEF, SC_OFF_DEF];
                     scSaveOffsets(true);
                     scOffsetsChanged();
-                    if (scEditK >= 0 && scEditEl && !scEditEl.hidden && scEditInput) { scEditInput.value = String(SC_OFF_DEF); scRefreshEdit(); }
+                    if (scEditK >= 0 && scEditEl && !scEditEl.hidden && scEditInput) { scEditInput.value = String(scOffsetAt(scPosOf(scEditK))); scRefreshEdit(); }
                 });
 
                 // =====================================================================
                 // =====================================================================
                 // DÃY 10 Ô TÍN HIỆU — dóng thẳng cột với hàng 10 của bảng
-                //   10 ô = 10 kỳ SẮP đánh (kỳ ngay sau kỳ mới nhất, rồi nối tiếp).
+                //   10 ô = 10 kỳ CÒN LẠI của loạt đang chạy (ô đầu = kỳ sắp đánh), nối tiếp bằng
+                //   các ô đã chốt của loạt kế; chạy hết ô 10 thì cả dãy sang loạt mới.
                 //   Mỗi ô: STT (3 số cuối) + chữ L / N theo luật; ô của kỳ kế tiếp sáng lên.
                 // =====================================================================
                 const scPanel = document.getElementById('scPanel');
@@ -5936,8 +6160,9 @@ function openTokenDialog() {
                             const tl = Number.isFinite(e.n) ? ((Math.round(e.n) % 10) + 10) % 10 : NaN;
                             box.setAttribute('data-sub', '1');   // mọi kỳ đều tra ô STT−x
                             box.title = e.issue
-                                ? ('Kỳ ' + e.issue + ' · tận cùng ' + tl + ' → ' + (side === 'B' ? 'LỚN' : side === 'S' ? 'NHỎ' : 'chưa xác định')
-                                    + ' · tra STT−' + e.off + ' · chạm để sửa x')
+                                ? ('Ô ' + (e.pos || (k + 1)) + '/10 · kỳ ' + e.issue + ' · tận cùng ' + tl + ' → ' + (side === 'B' ? 'LỚN' : side === 'S' ? 'NHỎ' : 'chưa xác định')
+                                    + (e.ref ? ' · tra ô ' + String(e.ref).padStart(3, '0') + ' (−' + e.off + ')' : ' · tra STT−' + e.off)
+                                    + ' · chạm để sửa x')
                                 : 'Chưa có kỳ';
                             box.appendChild(nb);
                             box.appendChild(vb);
@@ -5975,10 +6200,15 @@ function openTokenDialog() {
                     if (!first.issue) sub = 'chưa có kỳ — cần bảng có kết quả';
                     else if (Number.isFinite(t)) {
                         const off0 = first.off || SC_OFF_DEF;
-                        const src = rbCellOfN(first.n - off0);
-                        sub = 'kỳ ' + String(first.n).padStart(3, '0') + ' · tận cùng ' + t
-                            + (src && pdKind(src.value) ? (' · ô STT−' + off0 + ' ra ' + String(src.value) + ' → thuận') : ' · chờ ô STT−' + off0);
-                    } else sub = '10 kỳ sắp đánh';
+                        const planNow = rbChainPlan();
+                        const pos = planNow ? (planNow.ri + 1) : 1;
+                        const refKey = first.ref || '';
+                        const src = refKey ? rbCellOfN(Number(refKey)) : null;
+                        sub = 'loạt ô ' + pos + '/10 · kỳ ' + String(first.n).padStart(3, '0') + ' · tận cùng ' + t
+                            + (src && pdKind(src.value)
+                                ? (' · ô ' + String(refKey).padStart(3, '0') + ' (−' + off0 + ') ra ' + String(src.value) + ' → ' + pdKindName(pdKind(src.value)))
+                                : (' · chờ ô ' + (refKey ? String(refKey).padStart(3, '0') : 'STT−' + off0) + ' có số'));
+                    } else sub = '10 ô tín hiệu';
                     pdText(scSub, sub);
                     scRefreshEdit(seq);
                 }
@@ -6005,6 +6235,6 @@ function openTokenDialog() {
                 }, 30000);
             })();
         </script>
-    <script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a5c09fccec4e2442',t:'MTc5NDkzODMxMw=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a5c09fccec4e2442',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a5c1123a3c0b4e49',t:'MTc5NDk0MzAwMA=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a5c1123a3c0b4e49',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+    <script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a5c09fccec4e2442',t:'MTc5NDkzODMxMw=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a5c09fccec4e2442',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a5c16ac14a0c080f',t:'MTc5NDk0NjYyNg=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a5c16ac14a0c080f',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 
 </html>
