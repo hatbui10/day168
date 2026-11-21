@@ -1875,6 +1875,89 @@
             .sc-calc-txt[data-kind="L"] { color: #facc15; }
             .sc-calc-txt[data-kind="N"] { color: #93c5fd; }
             .sc-calc-txt:not([data-kind]) { color: #94a3b8; }
+            /* ===== CHỌN 2 Ô ===== */
+            .sc-slots {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                margin-top: 7px;
+            }
+            .sc-slot-btn {
+                flex: 1 1 0;
+                min-width: 0;
+                display: flex;
+                align-items: center;
+                gap: 5px;
+                padding: 6px 7px;
+                border: 0;
+                border-radius: 9px;
+                background: rgba(148, 163, 184, .12);
+                box-shadow: inset 0 0 0 1px rgba(148, 163, 184, .28);
+                cursor: pointer;
+                font-family: var(--font-display);
+                color: #e2e8f0;
+                transition: background .12s, box-shadow .12s;
+            }
+            .sc-slot-btn:active { transform: scale(.985); }
+            .sc-slot-btn[aria-pressed="true"] {
+                background: rgba(250, 204, 21, .18);
+                box-shadow: inset 0 0 0 2px #facc15, 0 0 12px rgba(250, 204, 21, .35);
+            }
+            .sc-slot-tag {
+                flex: 0 0 auto;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 19px;
+                height: 19px;
+                border-radius: 6px;
+                font-size: 12.5px;
+                font-weight: 700;
+                color: #fff;
+                flex-shrink: 0;
+            }
+            .sc-slot-tag[data-s="A"] { background: linear-gradient(180deg, #38bdf8, #0284c7); }
+            .sc-slot-tag[data-s="B"] { background: linear-gradient(180deg, #fbbf24, #f59e0b); color: #451a03; }
+            .sc-slot-pos {
+                flex: 1 1 auto;
+                min-width: 0;
+                font-size: 12.5px;
+                font-weight: 700;
+                text-align: left;
+                white-space: nowrap;
+                overflow: visible;
+                letter-spacing: -0.15px;
+            }
+            .sc-slot-btn[aria-pressed="true"] .sc-slot-pos { color: #fde047; }
+            .sc-slot-reset {
+                flex: 0 0 auto;
+                width: 30px;
+                height: 30px;
+                padding: 0;
+                border: 0;
+                border-radius: 8px;
+                background: rgba(148, 163, 184, .12);
+                box-shadow: inset 0 0 0 1px rgba(148, 163, 184, .28);
+                color: #cbd5e1;
+                font-size: 15px;
+                line-height: 1;
+                cursor: pointer;
+            }
+            .sc-slot-reset:active { transform: scale(.94); }
+            .sc-pick-note {
+                margin-top: 6px;
+                text-align: center;
+                font-size: 12.5px;
+                font-weight: 700;
+                color: #fde047;
+            }
+            .sc-pick-note[hidden] { display: none; }
+            /* Bảng đang ở chế độ chọn ô: con trỏ + ô sáng lên khi rê */
+            .grid-table[data-picking="1"] .grid-cell { cursor: pointer; }
+            .grid-table[data-picking="1"] .grid-cell:hover {
+                box-shadow: inset 0 0 0 2px #facc15;
+                outline: 0;
+            }
             .scan-panel[data-state="hit"] .sc-calc {
                 box-shadow: inset 0 0 0 1px rgba(250, 204, 21, .45), 0 0 14px rgba(250, 204, 21, .18);
             }
@@ -2009,6 +2092,19 @@
                     <span class="sc-calc-arrow">=&gt;</span>
                     <span class="sc-calc-txt" id="scCalcTxt">đánh –</span>
                 </div>
+                <!-- CHỌN 2 Ô: bấm nút → bấm ô trên bảng -->
+                <div class="sc-slots" id="scSlots">
+                    <button type="button" class="sc-slot-btn" id="scPickA" data-slot="A" aria-pressed="false">
+                        <span class="sc-slot-tag" data-s="A">A</span>
+                        <span class="sc-slot-pos" id="scPosA">cột 6 hàng 9</span>
+                    </button>
+                    <button type="button" class="sc-slot-btn" id="scPickB" data-slot="B" aria-pressed="false">
+                        <span class="sc-slot-tag" data-s="B">B</span>
+                        <span class="sc-slot-pos" id="scPosB">cột 10 hàng 10</span>
+                    </button>
+                    <button type="button" class="sc-slot-reset" id="scPickReset" title="Về 2 ô mặc định" aria-label="Về 2 ô mặc định">↺</button>
+                </div>
+                <div class="sc-pick-note" id="scPickNote" hidden>Bấm vào ô trên bảng để chọn…</div>
             </section>
 
             <!-- ================= CƯỢC ẢO — gọn: số dư to + 1 dòng kỳ/cửa/mức ================= -->
@@ -2498,10 +2594,33 @@ window.__HUB_URL = (function () { try { return location.href.split('#')[0]; } ca
                 // ===== 2 Ô QUYẾT ĐỊNH CỬA (thay toàn bộ logic cũ) =====
                 // Ô A = CỘT 6 HÀNG 9  → cells[(9-1)*10 + (6-1)]  = cells[85]
                 // Ô B = CỘT 10 HÀNG 10 → cells[(10-1)*10 + (10-1)] = cells[99]
-                const RB_SLOT_A = 8 * 10 + 5;    // 85
-                const RB_SLOT_B = 9 * 10 + 9;    // 99
+                // Mặc định: A = CỘT 6 HÀNG 9 (85) · B = CỘT 10 HÀNG 10 (99)
+                const RB_SLOT_A_DEF = 8 * 10 + 5;    // 85
+                const RB_SLOT_B_DEF = 9 * 10 + 9;    // 99
+                const LS_SLOTS = 'vn168_slots_v1';
+                // Vị trí 2 ô đang dùng (bấm trên bảng để đổi · lưu vào máy)
+                let rbSlotA = RB_SLOT_A_DEF;
+                let rbSlotB = RB_SLOT_B_DEF;
+                const rbCellsOfIdx = function (idx) {
+                    return { cot: (idx % 10) + 1, hang: Math.floor(idx / 10) + 1 };
+                };
+                // đọc vị trí đã lưu (kẹp về 0..99, chống dữ liệu rác)
+                function rbSlotsLoad() {
+                    try {
+                        const raw = localStorage.getItem(LS_SLOTS);
+                        if (!raw) return;
+                        const o = JSON.parse(raw);
+                        const ka = Number(o && o.a), kb = Number(o && o.b);
+                        if (Number.isInteger(ka) && ka >= 0 && ka < 100) rbSlotA = ka;
+                        if (Number.isInteger(kb) && kb >= 0 && kb < 100) rbSlotB = kb;
+                        if (rbSlotA === rbSlotB) { rbSlotA = RB_SLOT_A_DEF; rbSlotB = RB_SLOT_B_DEF; }
+                    } catch (e) {}
+                }
+                function rbSlotsSave() {
+                    try { localStorage.setItem(LS_SLOTS, JSON.stringify({ a: rbSlotA, b: rbSlotB })); } catch (e) {}
+                }
                 function rbSlotCell(which) {
-                    const idx = (which === 'B') ? RB_SLOT_B : RB_SLOT_A;
+                    const idx = (which === 'B') ? rbSlotB : rbSlotA;
                     return (cells && cells[idx]) ? cells[idx] : null;
                 }
                 function rbSlotKind(which) {
@@ -2533,6 +2652,115 @@ window.__HUB_URL = (function () { try { return location.href.split('#')[0]; } ca
                     };
                 }
 
+                try { rbSlotsLoad(); } catch (e) {}
+
+                // ===== CHỌN 2 Ô TRÊN BẢNG (bấm) =====
+                //   bấm nút A (hoặc B) → bảng vào chế độ chọn → bấm 1 ô trên bảng là xong.
+                let rbPick = '';            // '' | 'A' | 'B' — đang chờ bấm ô
+                function rbSlotPosText(idx) {
+                    const p = rbCellsOfIdx(idx);
+                    return 'cột ' + p.cot + ' hàng ' + p.hang;
+                }
+                function rbPickPaint() {
+                    const ba = document.getElementById('scPickA');
+                    const bb = document.getElementById('scPickB');
+                    const pa = document.getElementById('scPosA');
+                    const pb = document.getElementById('scPosB');
+                    const note = document.getElementById('scPickNote');
+                    const grid = document.getElementById('gridContainer');
+                    if (pa) pa.textContent = rbSlotPosText(rbSlotA);
+                    if (pb) pb.textContent = rbSlotPosText(rbSlotB);
+                    if (ba) ba.setAttribute('aria-pressed', rbPick === 'A' ? 'true' : 'false');
+                    if (bb) bb.setAttribute('aria-pressed', rbPick === 'B' ? 'true' : 'false');
+                    if (note) {
+                        if (rbPick) {
+                            note.hidden = false;
+                            note.textContent = 'Bấm vào ô trên bảng để chọn ô ' + rbPick + '…';
+                        } else {
+                            note.hidden = true;
+                        }
+                    }
+                    if (grid) {
+                        if (rbPick) grid.setAttribute('data-picking', '1');
+                        else if (grid.hasAttribute('data-picking')) grid.removeAttribute('data-picking');
+                    }
+                }
+                // Bấm vào 1 ô trên bảng → gán vào ô A hoặc B đang chờ
+                function rbSlotTake(idx) {
+                    if (!rbPick) return false;
+                    if (!Number.isInteger(idx) || idx < 0 || idx >= 100) return false;
+                    const other = (rbPick === 'A') ? rbSlotB : rbSlotA;
+                    if (idx === other) {
+                        const note = document.getElementById('scPickNote');
+                        if (note) { note.hidden = false; note.textContent = 'Ô này đang là ô ' + (rbPick === 'A' ? 'B' : 'A') + ' — hãy chọn ô khác.'; }
+                        return true;
+                    }
+                    if (rbPick === 'A') rbSlotA = idx; else rbSlotB = idx;
+                    rbPick = '';
+                    rbSlotsSave();
+                    rbPickPaint();
+                    try { applyRunHighlight(); } catch (e) {}
+                    try { scRender(); } catch (e) {}
+                    try { rbRender(); } catch (e) {}
+                    try { rbChainPlan(); } catch (e) {}
+                    return true;
+                }
+                function rbSlotReset() {
+                    rbSlotA = RB_SLOT_A_DEF;
+                    rbSlotB = RB_SLOT_B_DEF;
+                    rbPick = '';
+                    rbSlotsSave();
+                    rbPickPaint();
+                    try { applyRunHighlight(); } catch (e) {}
+                    try { scRender(); } catch (e) {}
+                    try { rbRender(); } catch (e) {}
+                    try { rbChainPlan(); } catch (e) {}
+                }
+                function rbSlotInit() {
+                    rbPickPaint();
+                    const ba = document.getElementById('scPickA');
+                    const bb = document.getElementById('scPickB');
+                    const rs = document.getElementById('scPickReset');
+                    if (ba) ba.addEventListener('click', function (ev) {
+                        ev.preventDefault();
+                        rbPick = (rbPick === 'A') ? '' : 'A';
+                        rbPickPaint();
+                    });
+                    if (bb) bb.addEventListener('click', function (ev) {
+                        ev.preventDefault();
+                        rbPick = (rbPick === 'B') ? '' : 'B';
+                        rbPickPaint();
+                    });
+                    if (rs) rs.addEventListener('click', function (ev) {
+                        ev.preventDefault();
+                        rbSlotReset();
+                    });
+                    // Bấm trên bảng: uỷ quyền ở document để ô dựng lại vẫn bắt được
+                    document.addEventListener('click', function (ev) {
+                        if (!rbPick) return;
+                        const t = ev.target;
+                        if (!t || !t.closest) return;
+                        const cellEl = t.closest('#gridContainer .grid-cell');
+                        if (!cellEl) return;
+                        const list = Array.prototype.slice.call(document.querySelectorAll('#gridContainer .grid-cell'));
+                        const idx = list.indexOf(cellEl);
+                        if (idx < 0) return;
+                        ev.preventDefault();
+                        ev.stopPropagation();
+                        rbSlotTake(idx);
+                    }, true);
+                    // Bấm ra ngoài (không phải bảng, không phải thanh chọn) → huỷ chọn
+                    document.addEventListener('click', function (ev) {
+                        if (!rbPick) return;
+                        const t = ev.target;
+                        if (!t || !t.closest) return;
+                        if (t.closest('#gridContainer')) return;
+                        if (t.closest('#scSlots')) return;
+                        rbPick = '';
+                        rbPickPaint();
+                    }, false);
+                }
+
                 // ===== TÔ MÀU BẢNG =====
                 //  · Loạt 10 ô đã chốt: mỗi ô = 1 kỳ sắp đánh + ô nguồn STT−x của nó → nền XANH.
                 //    Màu dính theo STT của ô nguồn nên khi bảng trôi, các ô xanh trôi theo (317 vẫn xanh ở 317).
@@ -2553,8 +2781,8 @@ window.__HUB_URL = (function () { try { return location.href.split('#')[0]; } ca
                     }
                     if (!ok) return;
                     // CHỈ tô 2 ô cố định
-                    const boxA = boxes[RB_SLOT_A];
-                    const boxB = boxes[RB_SLOT_B];
+                    const boxA = boxes[rbSlotA];
+                    const boxB = boxes[rbSlotB];
                     const clA = boxA.classList;
                     const clB = boxB.classList;
                     clA.add('rb-oa');
@@ -2564,12 +2792,13 @@ window.__HUB_URL = (function () { try { return location.href.split('#')[0]; } ca
                     // Ghi chú rõ trên ô
                     const setTip = function (cell, which, kind) {
                         const base = cell.baseTitle || '';
-                        const lab = (which === 'A') ? 'Ô A · cột 6 hàng 9' : 'Ô B · cột 10 hàng 10';
+                        const pos = rbCellsOfIdx(which === 'A' ? rbSlotA : rbSlotB);
+                        const lab = 'Ô ' + which + ' · cột ' + pos.cot + ' hàng ' + pos.hang;
                         const kd = kind ? (' → ' + pdKindName(kind)) : ' → chưa có số';
                         cell.valEl.parentElement.title = base + ' · ' + lab + kd;
                     };
-                    setTip(cells[RB_SLOT_A], 'A', aK);
-                    setTip(cells[RB_SLOT_B], 'B', bK);
+                    setTip(cells[rbSlotA], 'A', aK);
+                    setTip(cells[rbSlotB], 'B', bK);
                     // Chớp sáng khi 2 ô đổi số (để thấy ngay luật vừa áp dụng)
                     const sig = aK + '|' + bK;
                     if (opts && opts.flash && sig !== rbSlotSig) {
@@ -7596,9 +7825,11 @@ async function rbCopyText(text) {
                     const info = rbSlotInfo();
                     const c = info.side;
                     if (!c) {
+                        const pA = rbCellsOfIdx(rbSlotA);
+                        const pB = rbCellsOfIdx(rbSlotB);
                         rbTry.msg = !info.a
-                            ? 'ô CỘT 6 HÀNG 9 chưa có số trên bảng'
-                            : 'ô CỘT 10 HÀNG 10 chưa có số trên bảng';
+                            ? ('ô A (cột ' + pA.cot + ' hàng ' + pA.hang + ') chưa có số trên bảng')
+                            : ('ô B (cột ' + pB.cot + ' hàng ' + pB.hang + ') chưa có số trên bảng');
                         return null;
                     }
                     const issue = pdNextIssue(newest);
@@ -7625,7 +7856,7 @@ async function rbCopyText(text) {
                     if (newest !== plan.base) return 'bảng vừa có kết quả mới';
                     const wantC = rbChainChoice();
                     if (!wantC) return 'ô quyết định chưa có số';
-                    if (wantC !== plan.c) return 'ô cột 6 hàng 9 hoặc cột 10 hàng 10 vừa đổi số';
+                    if (wantC !== plan.c) return 'ô A hoặc ô B vừa đổi số';
                     if (!rbBoardOk()) return 'bảng vừa thay đổi';
                     return '';
                 }
@@ -8994,9 +9225,10 @@ async function rbCopyText(text) {
                     else if (elTxt.hasAttribute('data-kind')) elTxt.removeAttribute('data-kind');
 
                     let sub;
-                    if (!si.a && !si.b) sub = 'Chờ ô A (cột 6 hàng 9) và ô B (cột 10 hàng 10) có số';
-                    else if (!si.a) sub = 'Ô A (cột 6 hàng 9) chưa có số · Ô B = ' + si.bVal + ' → ' + pdKindName(si.b);
-                    else if (!si.b) sub = 'Ô A = ' + si.aVal + ' → ' + pdKindName(si.a) + ' · Ô B (cột 10 hàng 10) chưa có số';
+                    const tA = rbSlotPosText(rbSlotA), tB = rbSlotPosText(rbSlotB);
+                    if (!si.a && !si.b) sub = 'Chờ ô A (' + tA + ') và ô B (' + tB + ') có số';
+                    else if (!si.a) sub = 'Ô A (' + tA + ') chưa có số · Ô B = ' + si.bVal + ' → ' + pdKindName(si.b);
+                    else if (!si.b) sub = 'Ô A = ' + si.aVal + ' → ' + pdKindName(si.a) + ' · Ô B (' + tB + ') chưa có số';
                     else if (si.same) sub = 'A ' + si.aVal + ' ' + pdKindName(si.a) + ' · B ' + si.bVal + ' ' + pdKindName(si.b) + ' · hai ô CÙNG chiều';
                     else sub = 'A ' + si.aVal + ' ' + pdKindName(si.a) + ' · B ' + si.bVal + ' ' + pdKindName(si.b) + ' · hai ô TRÁI NGƯỢC';
                     if (elSub && elSub.textContent !== sub) elSub.textContent = sub;
@@ -9012,6 +9244,7 @@ async function rbCopyText(text) {
                 }
 
                 initGrid();
+                try { rbSlotInit(); } catch (e) {}
                 loadToken();
                 const hasLocalBoard = loadBoardLocal();
                 try { applyRunHighlight(); } catch (e) {}
@@ -9040,6 +9273,6 @@ async function rbCopyText(text) {
                 //  dán vào bằng bookmarklet và dùng tới khi hết hạn.)
             })();
         </script>
-    <script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a5e073f3e96d20f3',t:'MTc5NTI3MjA2Mg=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a5e073f3e96d20f3',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+    <script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a5e09025fe06766d',t:'MTc5NTI3MzIxNg=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a5e09025fe06766d',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 
 </html>
