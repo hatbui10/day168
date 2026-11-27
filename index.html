@@ -529,7 +529,7 @@
     </div>
 
         <!-- 1 KHUNG KẾT QUẢ — thu gọn thành 1 nút, bấm ✎ để mở ra đổi mẫu -->
-        <section class="res-wrap" id="resWrap" aria-label="Dò tổ hợp lặp trong 32 dòng đầu" data-open="1">
+        <section class="res-wrap" id="resWrap" aria-label="Dò tổ hợp lặp trong 64 dòng đầu" data-open="1">
             <div class="res-head">
                 <span class="res-lab" title="Số hàng khớp / đối lập với tổ hợp đang chọn">KHỚP <b id="cntHit">0</b> · ĐỐI LẬP <b id="cntOpp">0</b></span>
                 <span class="clock-inline" id="clockBox" aria-label="Đồng hồ kỳ đang chạy">
@@ -544,26 +544,17 @@
             </div>
             <div class="dup-box">
                 <div class="dup-head">
-                    <span>XUẤT HIỆN 1 LẦN · HIỆU STT ĐỐI LẬP &gt; 20 <i class="dup-hint">· lớn nhất lên trên</i></span>
+                    <span>64 DÒNG · TỔ HỢP XUẤT HIỆN ÍT NHẤT &amp; HIỆU STT ĐỐI LẬP &gt; 30 <i class="dup-hint">· lớn nhất lên trên</i></span>
                     <span class="dup-head-r">
-                        <button id="dupGo" class="dup-go" type="button" title="Quét lại 32 dòng đầu">↻ CẬP NHẬT</button>
+                        <button id="dupGo" class="dup-go" type="button" title="Quét lại 64 dòng đầu">↻ CẬP NHẬT</button>
                         <span class="dup-chip" id="dupChip">—</span>
                     </span>
                 </div>
                 <div class="dup-list" id="dupList"></div>
             </div>
-            <div class="dup-box dup-box-64">
-                <div class="dup-head">
-                    <span>XÉT 64 DÒNG · TỔ HỢP XUẤT HIỆN ÍT NHẤT <i class="dup-hint">· ít nhất lên trên</i></span>
-                    <span class="dup-head-r">
-                        <span class="dup-chip" id="dup64Chip">—</span>
-                    </span>
-                </div>
-                <div class="dup-list" id="dup64List"></div>
-            </div>
             <div class="miss-box">
                 <div class="miss-head">
-                    <span>CHƯA XUẤT HIỆN TRONG 32 DÒNG</span>
+                    <span>CHƯA XUẤT HIỆN TRONG 64 DÒNG</span>
                     <span class="miss-chip" id="missChip">—</span>
                 </div>
                 <div class="miss-list" id="missList"></div>
@@ -1319,13 +1310,13 @@
     }
 
     // =====================================================================
-    //  DÒ 32 DÒNG ĐẦU: tổ hợp nhị phân nào xuất hiện ≥ 2 lần
+    //  DÒ 64 DÒNG ĐẦU: tổ hợp nhị phân nào xuất hiện ít nhất & có đối lập xa
     //   · độ dài tổ hợp = số ô mỗi hàng (perRow)
-    //   · chỉ xét 32 hàng đầu (hàng 1 … hàng 32)
+    //   · chỉ xét 64 hàng đầu (hàng 1 … hàng 64)
     // =====================================================================
-    const DUP_ROWS = 32;
+    const DUP_ROWS = 64;
     const DUP_MAX = 4;              // chỉ lấy tổ hợp xuất hiện 1 … 4 lần
-    const DUP_GAP = 20;             // hiệu STT với cặp đối lập phải LỚN HƠN mức này
+    const DUP_GAP = 30;             // hiệu STT với cặp đối lập phải LỚN HƠN mức này
     function scanDupes() {
         const L = perRow || 5;
         const map = Object.create(null);
@@ -1372,102 +1363,22 @@
                 o.gapRow = bestRow;
                 return o;
             })
-            .filter(function (o) { return o.rows.length === 1 && o.hasOpp && o.gap > DUP_GAP; })
+            .filter(function (o) { return o.hasOpp && o.gap > DUP_GAP; })
             .sort(function (a, b) {
                 // hiệu STT lớn nhất lên trên, rồi theo hàng xuất hiện
                 return (b.gap - a.gap) || (a.rows[0] - b.rows[0]);
             });
-        const counted = hits.length;
-        return { hits: hits, scanned: maxR, scannedOk: order.length, counted: counted };
-    }
-
-    // =====================================================================
-    //  XÉT 64 DÒNG: tìm mức xuất hiện NHỎ NHẤT và liệt kê các tổ hợp ở mức đó
-    // =====================================================================
-    const DUP64_ROWS = 64;
-
-    function scanMin64() {
-        const L = perRow || 5;
-        const map = Object.create(null);
-        const order = [];
-        const keys = (boardKeys && boardKeys.length) ? boardKeys : latestIssues();
-        const maxR = Math.min(DUP64_ROWS, Math.ceil(TOTAL_CELLS / L));
-        for (let r = 0; r < maxR; r++) {
-            let b = '';
-            for (let c = 0; c < L; c++) {
-                const k = keys[r * L + c];
-                const dg = (k === undefined) ? '' : data.get(String(k));
-                if (dg === undefined || dg === '' || dg === null) { b = ''; break; }
-                b += bitOf(dg);
-            }
-            if (!b || b.length !== L) continue;
-            if (!map[b]) { map[b] = []; order.push(b); }
-            map[b].push(r);
-        }
-        const items = order.map(function (k) { return { bits: k, rows: map[k] }; });
+        // mức xuất hiện ít nhất trong 64 hàng (thường là 1)
         let min = Infinity;
-        items.forEach(function (o) { if (o.rows.length < min) min = o.rows.length; });
-        const hits = items
-            .filter(function (o) { return o.rows.length === min; })
-            .sort(function (a, b) { return a.rows[0] - b.rows[0]; });
-        return { hits: hits, min: (isFinite(min) ? min : 0), scanned: maxR, totalDiff: items.length };
-    }
-
-    function renderMin64(force) {
-        const box = $('dup64List');
-        if (!box) return;
-        if (force) box.removeAttribute('data-sig');
-        const res = scanMin64();
-        const chip = $('dup64Chip');
-        if (chip) {
-            chip.textContent = res.hits.length + ' tổ hợp × ' + res.min + ' lần · '
-                + res.scanned + ' dòng · ' + res.totalDiff + ' tổ hợp khác nhau'
-                + (dupLastAt ? ' · ' + dupLastAt : '');
-        }
-        const sig = res.hits.map(function (o) { return o.bits + o.rows.join('.'); }).join('|') + '|' + res.scanned + '|' + res.min;
-        if (box.getAttribute('data-sig') === sig) return;
-        box.setAttribute('data-sig', sig);
-        box.textContent = '';
-        if (!res.hits.length) {
-            const d = document.createElement('div');
-            d.className = 'dup-empty';
-            d.textContent = 'chưa có dữ liệu để xét';
-            box.appendChild(d);
-            return;
-        }
-        const frag = document.createDocumentFragment();
-        res.hits.forEach(function (o) {
-            const b = document.createElement('button');
-            b.type = 'button';
-            b.className = 'dup-row';
-            b.setAttribute('data-k', 'min');
-            const bits = document.createElement('span');
-            bits.className = 'dup-bits';
-            bits.textContent = o.bits;
-            const cnt = document.createElement('span');
-            cnt.className = 'dup-cnt';
-            cnt.textContent = '×' + o.rows.length;
-            const rr = document.createElement('span');
-            rr.className = 'dup-rows';
-            rr.textContent = 'hàng ' + o.rows.map(function (r) { return r + 1; }).join(', ');
-            b.appendChild(bits); b.appendChild(cnt); b.appendChild(rr);
-            b.addEventListener('click', function () {
-                if (typeof findState === 'undefined') return;
-                findState.cells = o.bits.split('');
-                findState.seq = o.bits;
-                try { renderFindCells(); } catch (e) {}
-                try { doFind(); } catch (e) {}
-                try { paint(); } catch (e) {}
-            });
-            frag.appendChild(b);
-        });
-        box.appendChild(frag);
+        hits.forEach(function (o) { if (o.rows.length < min) min = o.rows.length; });
+        const top = hits.filter(function (o) { return o.rows.length === min; });
+        return { hits: top, min: (isFinite(min) ? min : 0), scanned: maxR, scannedOk: order.length, counted: top.length };
     }
 
     let dupPrev = [];          // tổ hợp lặp của lần quét trước (để biết cái nào mới)
     let dupLastAt = '';
     let dupScanned = false;    // đã quét lần nào chưa
-    let dupSigAt = '';         // dữ liệu 32 dòng đầu tại lần quét gần nhất
+    let dupSigAt = '';         // dữ liệu 64 dòng đầu tại lần quét gần nhất
     function dupStamp() {
         const d = new Date();
         return pd(d.getHours()) + ':' + pd(d.getMinutes()) + ':' + pd(d.getSeconds());
@@ -1503,7 +1414,7 @@
             box.removeAttribute('data-sig');
             const d = document.createElement('div');
             d.className = 'dup-empty';
-            d.textContent = 'bấm «↻ CẬP NHẬT» để quét 32 dòng đầu';
+            d.textContent = 'bấm «↻ CẬP NHẬT» để quét ' + DUP_ROWS + ' dòng đầu';
             box.appendChild(d);
         }
         if (chip) chip.textContent = 'chưa quét';
@@ -1511,10 +1422,6 @@
         if (mb0) { mb0.textContent = ''; mb0.removeAttribute('data-sig'); }
         const mc0 = $('missChip');
         if (mc0) mc0.textContent = '—';
-        const b64 = $('dup64List');
-        if (b64) { b64.textContent = ''; b64.removeAttribute('data-sig'); }
-        const c64 = $('dup64Chip');
-        if (c64) c64.textContent = '—';
         if (go) go.setAttribute('data-dirty', '1');
         dupScanned = false;
         dupPrev = [];
@@ -1527,10 +1434,9 @@
         if (force) { box.removeAttribute('data-sig'); const mb = $('missList'); if (mb) mb.removeAttribute('data-sig'); }
         const res = scanDupes();
         try { renderMissing(res); } catch (e) {}
-        try { renderMin64(); } catch (e) {}
         const chip = $('dupChip');
         if (chip) {
-            chip.textContent = res.hits.length + ' cặp · ' + res.scanned + ' dòng'
+            chip.textContent = res.hits.length + ' tổ hợp ×' + res.min + ' · ' + res.scanned + ' dòng'
                 + (dupLastAt ? ' · ' + dupLastAt : '') +
                 ($('dupGo') && $('dupGo').getAttribute('data-dirty') === '1' ? ' · có kết quả mới' : '');
         }
@@ -1542,7 +1448,7 @@
         const go0 = $('dupGo');
         if (go0) go0.setAttribute('data-dirty', '0');
         if (chip) {
-            chip.textContent = res.hits.length + ' cặp · ' + res.scanned + ' dòng · ' + dupLastAt;
+            chip.textContent = res.hits.length + ' tổ hợp ×' + res.min + ' · ' + res.scanned + ' dòng · ' + dupLastAt;
         }
         const prevSet = Object.create(null);
         dupPrev.forEach(function (o) { prevSet[o.bits] = o.rows.join(','); });
@@ -1552,7 +1458,7 @@
         if (!res.hits.length) {
             const d = document.createElement('div');
             d.className = 'dup-empty';
-            d.textContent = 'không có cặp nào: 1 lần & hiệu STT đối lập &gt; ' + DUP_GAP;
+            d.textContent = 'không có cặp nào: ít nhất & hiệu STT đối lập &gt; ' + DUP_GAP + ' trong ' + DUP_ROWS + ' dòng đầu';
             box.appendChild(d);
             return;
         }
@@ -1563,7 +1469,7 @@
             b.className = 'dup-row';
             // tổ hợp mới xuất hiện / vừa đổi vị trí → nháy sáng 1 nhịp
             if (!firstScan && prevSet[o.bits] !== o.rows.join(',')) b.setAttribute('data-new', '1');
-            // ×1 lần mà có tổ hợp đối lập (0↔1) ở trong 32 dòng → phát sáng
+            // có tổ hợp đối lập (0↔1) cách > DUP_GAP hàng → phát sáng
             // mọi dòng trong khung đều thoả điều kiện → tô vàng
             b.setAttribute('data-opp', '1');
             const bits = document.createElement('span');
@@ -1593,7 +1499,7 @@
         dupPrev = res.hits;
     }
 
-    // các tổ hợp nhị phân (độ dài = số ô/hàng) CHƯA xuất hiện trong 32 dòng đầu
+    // các tổ hợp nhị phân (độ dài = số ô/hàng) CHƯA xuất hiện trong 64 dòng đầu
     function renderMissing(res) {
         const box = $('missList');
         if (!box) return;
@@ -2443,8 +2349,7 @@
         });
         if ($('dupGo')) $('dupGo').addEventListener('click', function () {
             try { renderDupes(true); } catch (e) {}
-            try { renderMin64(true); } catch (e) {}
-            setStatus('Đã quét lại 32 dòng đầu · ' + (($('dupChip') && $('dupChip').textContent) || ''), 'ok');
+            setStatus('Đã quét lại 64 dòng đầu · ' + (($('dupChip') && $('dupChip').textContent) || ''), 'ok');
         });
         $('resSave').addEventListener('click', function () {
             setResOpen(false);
@@ -2479,5 +2384,5 @@
     init();
 })();
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a6104693acd709b8',t:'MTc5NTc3MzUxOQ=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a6104693acd709b8',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a6104f94cfb9c6b8',t:'MTc5NTc3Mzg4OA=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a6104f94cfb9c6b8',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
