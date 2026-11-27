@@ -607,6 +607,15 @@
             color: #1c1917; background: linear-gradient(180deg, #fde047, #f59e0b);
             box-shadow: 0 0 12px rgba(250,204,21,.7), inset 0 0 0 1px #fef08a;
         }
+        .eb-cfgrow { display: flex; align-items: center; }
+        .eb-cfg[hidden] { display: none !important; }
+        /* nhập xong → thu gọn thành 1 nút nhỏ */
+        .eb-cfgmini {
+            cursor: pointer; border: 0; font-family: inherit; font-size: 9px; font-weight: 900;
+            letter-spacing: .06em; padding: 4px 10px; border-radius: 999px;
+            color: #ddd6fe; background: rgba(2,6,23,.8); box-shadow: inset 0 0 0 1px #7c3aed;
+        }
+        .eb-cfgmini:active { transform: scale(.96); }
         .eb-cfg { flex-wrap: wrap; align-items: center; }
         .eb-cfg label { font-size: 9px; font-weight: 800; color: #a78bfa; letter-spacing: .04em; }
         .eb-cfg input {
@@ -745,10 +754,13 @@
             <button class="eb-step" id="ebNext" type="button" title="tăng mức cược">▶</button>
         </div>
         <div class="eb-steps" id="ebSteps"></div>
-        <div class="eb-row eb-cfg">
-            <input id="ebCfg" type="text" inputmode="numeric" aria-label="Các mức cược"
-                   placeholder="10 25 60 150 350 600">
-            <button class="eb-save" id="ebSaveCfg" type="button">LƯU MỨC</button>
+        <div class="eb-cfgrow">
+            <div class="eb-row eb-cfg" id="ebCfgBox">
+                <input id="ebCfg" type="text" inputmode="numeric" aria-label="Các mức cược"
+                       placeholder="10 25 60 150 350 600">
+                <button class="eb-save" id="ebSaveCfg" type="button">LƯU MỨC</button>
+            </div>
+            <button class="eb-cfgmini" id="ebCfgMini" type="button" hidden>✎ sửa mức</button>
         </div>
         <div class="eb-status" id="ebStatus">chọn LỚN / NHỎ để đặt cược vào kỳ đang chạy</div>
         <div class="eb-hist-head">
@@ -2615,6 +2627,18 @@
         return best;
     }
 
+    // ô nhập mức cược: mở rộng khi cần sửa, nhập xong thì thu gọn lại thành 1 nút nhỏ
+    function betCfgOpen(open) {
+        const box = $('ebCfgBox'), mini = $('ebCfgMini');
+        if (!box || !mini) return;
+        box.hidden = !open;
+        mini.hidden = !!open;
+        if (open) {
+            const cfg = $('ebCfg');
+            if (cfg) { try { cfg.focus(); cfg.select(); } catch (e) {} }
+        }
+    }
+
     function betStatus(msg, kind) {
         const el = $('ebStatus');
         if (!el) return;
@@ -2805,6 +2829,7 @@
         if (betState.lv >= betState.levels.length) betState.lv = 0;
         betSave(); betRender();
         betStatus('đã lưu ' + betState.levels.length + ' mức cược · mức 1 = ' + betFmt(betState.levels[0]), 'win');
+        try { betCfgOpen(false); } catch (e) {}
     }
 
     function betInit() {
@@ -2825,6 +2850,7 @@
         if ($('ebCfg')) $('ebCfg').addEventListener('keydown', function (ev) {
             if (ev.key === 'Enter') { ev.preventDefault(); betApplyLevels(this.value); }
         });
+        if ($('ebCfgMini')) $('ebCfgMini').addEventListener('click', function () { betCfgOpen(true); });
         if ($('ebReset')) $('ebReset').addEventListener('click', function () {
             betState.bal = BET_START; betState.lv = 0; betState.pending = null; betState.hist = [];
             betSave(); betRender();
@@ -2832,6 +2858,11 @@
         });
         betRender();
         try { betSettle(); } catch (e) {}
+        // đã có mức cược lưu trên máy → mặc định thu gọn, chỉ hiện nút nhỏ
+        try {
+            const saved = localStorage.getItem(BET_LS);
+            if (saved) betCfgOpen(false);
+        } catch (e) {}
     }
 
     // =====================================================================
@@ -2908,5 +2939,5 @@
     init();
 })();
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a611d8dbb9d186b1',t:'MTc5NTc4OTk5Nw=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a611d8dbb9d186b1',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>
